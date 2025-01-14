@@ -1,11 +1,9 @@
 package cn.ussshenzhou.notenoughbandwidth;
 
-import net.neoforged.fml.common.EventBusSubscriber;
-
 /**
  * @author USS_Shenzhou
  */
-@EventBusSubscriber(modid = NotEnoughBandwidth.MODID, bus = EventBusSubscriber.Bus.MOD)
+//@EventBusSubscriber(modid = NotEnoughBandwidth.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class Config {
     /*private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
