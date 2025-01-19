@@ -43,7 +43,7 @@ public class PacketAggregationPacket implements CustomPacketPayload {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void encode(FriendlyByteBuf buffer) {
-        int index = PacketTypeIndexManager.getIndex(this.type);
+        int index = PacketTypeIndexManager.getIndexNotTight(this.type);
         FriendlyByteBuf bufRaw = new FriendlyByteBuf(ByteBufAllocator.DEFAULT.buffer());
         if (index != -1) {
             bufRaw.writeMedium(index);
