@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.registration.NetworkPayloadSetup;
-import org.checkerframework.checker.units.qual.N;
 import org.slf4j.event.Level;
 
 import java.util.ArrayList;
@@ -28,6 +27,8 @@ public class PacketTypeIndexManager {
 
     public static void init(NetworkPayloadSetup setup) {
         synchronized (NAMESPACES) {
+            PacketAggregationManager.init();
+
             initialized = false;
             NAMESPACES.clear();
             PATHS.clear();
@@ -49,9 +50,9 @@ public class PacketTypeIndexManager {
                         pathMap = new Object2IntOpenHashMap<>();
                     }
                     pathMap.put(type.getPath(), pathMap.size());
-                    PATHS.get(namespaceId1).add(type.getPath());
                     return pathMap;
                 });
+                PATHS.get(namespaceIndex.get() - 1).add(type.getPath());
             });
 
             var logger = LogUtils.getLogger();
@@ -83,6 +84,15 @@ public class PacketTypeIndexManager {
             } else {
                 return 0x80000000 | (namespaceIndex << 12) | (pathIndex);
             }
+        }
+        return 0;
+    }
+
+    public static int getIndexNotTight(ResourceLocation type) {
+        if (initialized && contains(type)) {
+            int namespaceIndex = NAMESPACE_MAP.getInt(type.getNamespace());
+            int pathIndex = PATH_MAPS.get(namespaceIndex).getInt(type.getPath());
+            return 0x80000000 | (namespaceIndex << 12) | (pathIndex);
         }
         return 0;
     }

@@ -1,8 +1,6 @@
 package cn.ussshenzhou.notenoughbandwidth.helpers;
 
 import cn.ussshenzhou.notenoughbandwidth.managers.PacketTypeIndexManager;
-import com.mojang.logging.LogUtils;
-import io.netty.buffer.ByteBufUtil;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
