@@ -64,6 +64,9 @@ public class PacketTypeIndexManager {
 
                 });
             }
+            if (NAMESPACES.size() > 4096 || PATHS.stream().anyMatch(l -> l.size() > 4096)) {
+                throw new RuntimeException("There are too many namespaces and/or paths (Max 4096 namespaces, 4096 paths for each namespace).");
+            }
             initialized = true;
         }
     }

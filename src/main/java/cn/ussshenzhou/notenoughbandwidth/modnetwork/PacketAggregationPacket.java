@@ -85,7 +85,7 @@ public class PacketAggregationPacket implements CustomPacketPayload {
         } else {
             this.buf = new FriendlyByteBuf(buffer.retainedDuplicate());
         }
-        int index = buf.readMedium();
+        int index = buf.readUnsignedMedium();
         if (index != -1) {
             type = PacketTypeIndexManager.getResourceLocation(index, false);
         } else {
