@@ -22,11 +22,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * @author USS_Shenzhou
  */
-@Mixin(value = Connection.class,priority = 1)
+@Mixin(value = Connection.class, priority = 1)
 public abstract class ConnectionMixin {
 
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;Z)V", at = @At("HEAD"), cancellable = true)
     private void nebwPacketAggregate(Packet<?> packet, PacketSendListener listener, boolean flush, CallbackInfo ci) {
+        if (System.getProperties().containsKey("neb.disable_aggregation")) {
+            return;
+        }
         Connection thiz = (Connection) (Object) this;
         if (thiz.getPacketListener() == null
                 || thiz.getPacketListener().protocol() != ConnectionProtocol.PLAY

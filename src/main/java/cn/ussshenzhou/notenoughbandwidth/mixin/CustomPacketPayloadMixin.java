@@ -14,6 +14,10 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class CustomPacketPayloadMixin {
     @Redirect(method = "writeCap", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/FriendlyByteBuf;writeResourceLocation(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/network/FriendlyByteBuf;"))
     private FriendlyByteBuf nebwIndexedHeaderEncode(FriendlyByteBuf buf, ResourceLocation resourceLocation) {
+        if (System.getProperties().containsKey("neb.disable_index")) {
+            buf.writeResourceLocation(resourceLocation);
+            return buf;
+        }
         CustomPacketPrefixHelper.get()
                 .index(resourceLocation)
                 .save(buf);
@@ -22,6 +26,9 @@ public class CustomPacketPayloadMixin {
 
     @Redirect(method = "decode(Lnet/minecraft/network/FriendlyByteBuf;)Lnet/minecraft/network/protocol/common/custom/CustomPacketPayload;", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/FriendlyByteBuf;readResourceLocation()Lnet/minecraft/resources/ResourceLocation;"))
     private ResourceLocation nebwIndexedHeaderDecode(FriendlyByteBuf buf) {
+        if (System.getProperties().containsKey("neb.disable_index")) {
+            return buf.readResourceLocation();
+        }
         return CustomPacketPrefixHelper.getType(buf);
     }
 }
