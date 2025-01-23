@@ -49,15 +49,13 @@ public abstract class ConnectionMixin {
                 packet instanceof ServerboundCustomPayloadPacket(CustomPacketPayload payload)
                         && (
                         payload instanceof PacketAggregationPacket
-                                || payload instanceof MinecraftRegisterPayload
-                                || payload instanceof MinecraftUnregisterPayload
+                                || "minecraft".equals(payload.type().id().getNamespace())
                 ))
                 || (
                 packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload)
                         && (
                         payload instanceof PacketAggregationPacket
-                                || payload instanceof MinecraftRegisterPayload
-                                || payload instanceof MinecraftUnregisterPayload
+                                || "minecraft".equals(payload.type().id().getNamespace())
                 ))
         ) {
             return;

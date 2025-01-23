@@ -56,7 +56,7 @@ public class PacketTypeIndexManager {
             });
 
             var logger = LogUtils.getLogger();
-            if (logger.isEnabledForLevel(Level.DEBUG)) {
+            if (logger.isDebugEnabled()) {
                 logger.debug("PacketTypeIndexManager initialized.");
                 NAMESPACE_MAP.forEach((namespace, id) -> {
                     logger.debug("namespace: {} id: {}", namespace, id);
@@ -73,6 +73,9 @@ public class PacketTypeIndexManager {
 
     private static boolean contains(ResourceLocation type) {
         if (!initialized) {
+            return false;
+        }
+        if ("minecraft".equals(type.getNamespace())) {
             return false;
         }
         return NAMESPACE_MAP.containsKey(type.getNamespace()) && PATH_MAPS.get(NAMESPACE_MAP.getInt(type.getNamespace())).containsKey(type.getPath());
