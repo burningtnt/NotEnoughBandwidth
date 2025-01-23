@@ -14,6 +14,8 @@ import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundCommandsPacket;
+import net.neoforged.neoforge.network.payload.MinecraftRegisterPayload;
+import net.neoforged.neoforge.network.payload.MinecraftUnregisterPayload;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,6 +34,7 @@ public abstract class ConnectionMixin {
     @Nullable
     private volatile PacketListener packetListener;
 
+    @SuppressWarnings("UnstableApiUsage")
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;Z)V", at = @At("HEAD"), cancellable = true)
     private void nebwPacketAggregate(Packet<?> packet, PacketSendListener listener, boolean flush, CallbackInfo ci) {
         if (this.packetListener != null && this.packetListener.protocol() != ConnectionProtocol.PLAY) {
@@ -42,8 +45,20 @@ public abstract class ConnectionMixin {
                 || thiz.getPacketListener().protocol() != ConnectionProtocol.PLAY
                 || packet instanceof BundlePacket<?>
                 || packet instanceof ClientboundCommandsPacket
-                || (packet instanceof ServerboundCustomPayloadPacket(CustomPacketPayload payload) && payload instanceof PacketAggregationPacket)
-                || (packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload) && payload instanceof PacketAggregationPacket)
+                || (
+                packet instanceof ServerboundCustomPayloadPacket(CustomPacketPayload payload)
+                        && (
+                        payload instanceof PacketAggregationPacket
+                                || payload instanceof MinecraftRegisterPayload
+                                || payload instanceof MinecraftUnregisterPayload
+                ))
+                || (
+                packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload)
+                        && (
+                        payload instanceof PacketAggregationPacket
+                                || payload instanceof MinecraftRegisterPayload
+                                || payload instanceof MinecraftUnregisterPayload
+                ))
         ) {
             return;
         }
