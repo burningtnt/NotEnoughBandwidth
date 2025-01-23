@@ -1,9 +1,13 @@
 package cn.ussshenzhou.notenoughbandwidth.mixin;
 
 import cn.ussshenzhou.notenoughbandwidth.helpers.CustomPacketPrefixHelper;
+import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
@@ -12,9 +16,15 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  */
 @Mixin(targets = "net.minecraft.network.protocol.common.custom.CustomPacketPayload$1")
 public class CustomPacketPayloadMixin {
+
+    @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
+    @Shadow
+    @Final
+    ConnectionProtocol val$protocol;
+
     @Redirect(method = "writeCap", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/FriendlyByteBuf;writeResourceLocation(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/network/FriendlyByteBuf;"))
     private FriendlyByteBuf nebwIndexedHeaderEncode(FriendlyByteBuf buf, ResourceLocation resourceLocation) {
-        if (System.getProperties().containsKey("neb.disable_index")) {
+        if (val$protocol != ConnectionProtocol.PLAY) {
             buf.writeResourceLocation(resourceLocation);
             return buf;
         }
@@ -26,7 +36,7 @@ public class CustomPacketPayloadMixin {
 
     @Redirect(method = "decode(Lnet/minecraft/network/FriendlyByteBuf;)Lnet/minecraft/network/protocol/common/custom/CustomPacketPayload;", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/FriendlyByteBuf;readResourceLocation()Lnet/minecraft/resources/ResourceLocation;"))
     private ResourceLocation nebwIndexedHeaderDecode(FriendlyByteBuf buf) {
-        if (System.getProperties().containsKey("neb.disable_index")) {
+        if (val$protocol != ConnectionProtocol.PLAY) {
             return buf.readResourceLocation();
         }
         return CustomPacketPrefixHelper.getType(buf);
