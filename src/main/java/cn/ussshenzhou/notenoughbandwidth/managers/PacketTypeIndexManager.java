@@ -76,7 +76,14 @@ public class PacketTypeIndexManager {
             return false;
         }
         if ("minecraft".equals(type.getNamespace())) {
-            return false;
+            switch (type.getPath()) {
+                case "register",
+                     "unregister" -> {
+                    return false;
+                }
+                default -> {
+                }
+            }
         }
         return NAMESPACE_MAP.containsKey(type.getNamespace()) && PATH_MAPS.get(NAMESPACE_MAP.getInt(type.getNamespace())).containsKey(type.getPath());
     }
