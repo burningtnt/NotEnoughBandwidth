@@ -5,7 +5,6 @@ import cn.ussshenzhou.notenoughbandwidth.modnetwork.PacketAggregationPacket;
 import com.mojang.logging.LogUtils;
 import io.netty.channel.DefaultChannelPipeline;
 import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.BundlePacket;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
@@ -22,12 +21,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PacketAggregationManager {
     private static final Object LOCK = new Object();
     private static final ConcurrentHashMap<ResourceLocation, ArrayDeque<AtomicInteger>> PACKET_FREQUENCY_COUNTER = new ConcurrentHashMap<>();
-    private static final HashSet<ResourceLocation> TAKE_OVER_LIST = new HashSet<>();
+    private static final HashSet<ResourceLocation> TAKE_OVER_LIST = new HashSet<>() {{
+        add(ResourceLocation.withDefaultNamespace("level_chunk_with_light"));
+        add(ResourceLocation.withDefaultNamespace("custom_payload"));
+    }};
     private static final WeakHashMap<Connection, HashMap<ResourceLocation, ArrayList<Packet<?>>>> PACKET_BUFFER = new WeakHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor();
     private static final ArrayList<ScheduledFuture<?>> TASKS = new ArrayList<>();
-    private static final int PACKETS_THRESHOLD_IN_1SEC = 20 * 10;
-    private static final int FLUSH_PERIOD_IN_MS = 20;
+    private static final int PACKETS_THRESHOLD_IN_1SEC = 20 * 2;
+    private static final int FLUSH_PERIOD_IN_MS = 25;
     private static final int QUEUE_CAPACITY = Math.max(1000 / FLUSH_PERIOD_IN_MS, 2);
 
     public static void init() {
@@ -47,7 +49,7 @@ public class PacketAggregationManager {
                         queue.addLast(new AtomicInteger());
                     }
                 }
-            }, 0, 50, TimeUnit.MILLISECONDS));
+            }, 0, FLUSH_PERIOD_IN_MS, TimeUnit.MILLISECONDS));
         }
     }
 

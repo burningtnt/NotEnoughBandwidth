@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.registration.NetworkPayloadSetup;
-import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -74,16 +73,6 @@ public class PacketTypeIndexManager {
     private static boolean contains(ResourceLocation type) {
         if (!initialized) {
             return false;
-        }
-        if ("minecraft".equals(type.getNamespace())) {
-            switch (type.getPath()) {
-                case "register",
-                     "unregister" -> {
-                    return false;
-                }
-                default -> {
-                }
-            }
         }
         return NAMESPACE_MAP.containsKey(type.getNamespace()) && PATH_MAPS.get(NAMESPACE_MAP.getInt(type.getNamespace())).containsKey(type.getPath());
     }

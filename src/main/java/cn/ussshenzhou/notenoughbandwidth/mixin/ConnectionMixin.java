@@ -34,36 +34,28 @@ public abstract class ConnectionMixin {
     @Nullable
     private volatile PacketListener packetListener;
 
-    @SuppressWarnings("UnstableApiUsage")
+    @Shadow
+    public abstract void send(Packet<?> packet, @org.jetbrains.annotations.Nullable PacketSendListener listener, boolean flush);
+
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;Z)V", at = @At("HEAD"), cancellable = true)
     private void nebwPacketAggregate(Packet<?> packet, PacketSendListener listener, boolean flush, CallbackInfo ci) {
         if (this.packetListener != null && this.packetListener.protocol() != ConnectionProtocol.PLAY) {
             return;
         }
-        Connection thiz = (Connection) (Object) this;
-        if (thiz.getPacketListener() == null
-                || thiz.getPacketListener().protocol() != ConnectionProtocol.PLAY
-                || packet instanceof BundlePacket<?>
-                || packet instanceof ClientboundCommandsPacket
-                || (
-                packet instanceof ServerboundCustomPayloadPacket(CustomPacketPayload payload)
-                        && (
-                        payload instanceof PacketAggregationPacket
-                                || payload instanceof MinecraftRegisterPayload
-                                || payload instanceof MinecraftUnregisterPayload
-                ))
-                || (
-                packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload)
-                        && (
-                        payload instanceof PacketAggregationPacket
-                                || payload instanceof MinecraftRegisterPayload
-                                || payload instanceof MinecraftUnregisterPayload
-                ))
-        ) {
+        if (packet instanceof BundlePacket<?> bundlePacket) {
+            bundlePacket.subPackets().forEach(p -> this.send(p, listener, flush));
+            ci.cancel();
             return;
         }
-        if (!PacketAggregationManager.aboutToSend(packet, thiz)) {
+        if (packet instanceof ServerboundCustomPayloadPacket(CustomPacketPayload payload) && payload instanceof PacketAggregationPacket) {
+            return;
+        }
+        if (packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload) && payload instanceof PacketAggregationPacket) {
+            return;
+        }
+        if (!PacketAggregationManager.aboutToSend(packet, (Connection) (Object) this)) {
             ci.cancel();
+            return;
         }
     }
 }

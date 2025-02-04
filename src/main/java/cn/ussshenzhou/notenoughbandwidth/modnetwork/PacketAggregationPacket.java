@@ -43,11 +43,13 @@ public class PacketAggregationPacket implements CustomPacketPayload {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void encode(FriendlyByteBuf buffer) {
-        int index = PacketTypeIndexManager.getIndexNotTight(this.type);
         FriendlyByteBuf bufRaw = new FriendlyByteBuf(ByteBufAllocator.DEFAULT.buffer());
-        if (index != -1) {
+        int index = PacketTypeIndexManager.getIndexNotTight(this.type);
+        if (index != 0) {
+            bufRaw.writeBoolean(true);
             bufRaw.writeMedium(index);
         } else {
+            bufRaw.writeBoolean(false);
             bufRaw.writeResourceLocation(this.type);
         }
         for (Packet packet : this.packets) {
@@ -63,7 +65,7 @@ public class PacketAggregationPacket implements CustomPacketPayload {
             buffer.writeBoolean(false);
             buffer.writeBytes(bufRaw);
         } else {
-            if (GameTestHooks.isGametestEnabled()) {
+            if (LogUtils.getLogger().isDebugEnabled()) {
                 LogUtils.getLogger().debug("Packet {} aggregation compressed: {} bytes-> {} bytes ( {} %).",
                         type, bufRaw.readableBytes(), bufCompressed.readableBytes(),
                         String.format("%.2f", 100f * compressRatio));
@@ -85,9 +87,8 @@ public class PacketAggregationPacket implements CustomPacketPayload {
         } else {
             this.buf = new FriendlyByteBuf(buffer.retainedDuplicate());
         }
-        int index = buf.readUnsignedMedium();
-        if (index != -1) {
-            type = PacketTypeIndexManager.getResourceLocation(index, false);
+        if (buf.readBoolean()) {
+            type = PacketTypeIndexManager.getResourceLocation(buf.readUnsignedMedium() & 0x00ffffff, false);
         } else {
             type = buf.readResourceLocation();
         }
