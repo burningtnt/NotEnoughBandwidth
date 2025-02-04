@@ -25,7 +25,7 @@ public class PacketTypeIndexManager {
     private static final HashMap<Integer, Object2IntMap<String>> PATH_MAPS = new HashMap<>();
 
     public static void init(NetworkPayloadSetup setup) {
-        synchronized (NAMESPACES) {
+        synchronized (PacketTypeIndexManager.class) {
             PacketAggregationManager.init();
 
             initialized = false;

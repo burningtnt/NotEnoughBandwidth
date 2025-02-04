@@ -1,13 +1,11 @@
-package cn.ussshenzhou.notenoughbandwidth.helpers;
+package cn.ussshenzhou.notenoughbandwidth.network.compressed;
 
-import cn.ussshenzhou.notenoughbandwidth.managers.PacketTypeIndexManager;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.ConnectionProtocol;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 
 /**
@@ -56,58 +54,8 @@ import java.util.List;
  *
  * @author USS_Shenzhou
  */
-public class CustomPacketPrefixHelper {
-    private static final ThreadLocal<CustomPacketPrefixHelper> INSTANCES = ThreadLocal.withInitial(CustomPacketPrefixHelper::new);
-
-    private int prefix = 0;
-    private ResourceLocation type = null;
-
-    private CustomPacketPrefixHelper() {
-    }
-
-    public static CustomPacketPrefixHelper get() {
-        var instance = INSTANCES.get();
-        instance.prefix = 0;
-        instance.type = null;
-        return instance;
-    }
-
-    public CustomPacketPrefixHelper index(ResourceLocation type) {
-        int index = PacketTypeIndexManager.getIndex(type);
-        if (index == 0) {
-            this.type = type;
-            return this;
-        }
-        this.type = type;
-        prefix |= index;
-        return this;
-    }
-
-    public void save(FriendlyByteBuf buf) {
-        if (prefix >>> 31 == 0) {
-            buf.writeByte(prefix >>> 24);
-            buf.writeResourceLocation(type);
-        }
-        if (prefix >>> 31 == 1) {
-            if ((prefix >>> 30 & 1) == 1) {
-                buf.writeMedium(prefix >>> 8);
-            } else {
-                buf.writeInt(prefix);
-            }
-        }
-    }
-
-    @Nullable
-    public static ResourceLocation getType(FriendlyByteBuf buf) {
-        int fixed = buf.readUnsignedByte() & 0xff;
-        if (fixed >>> 7 == 0) {
-            return buf.readResourceLocation();
-        } else {
-            if (fixed >>> 6 == 0) {
-                return PacketTypeIndexManager.getResourceLocation(buf.readUnsignedMedium(), false);
-            } else {
-                return PacketTypeIndexManager.getResourceLocation(buf.readUnsignedShort(), true);
-            }
-        }
-    }
+@MethodsReturnNonnullByDefault
+@ParametersAreNonnullByDefault
+public interface CustomPayload {
+    CustomPacketPayload payload();
 }

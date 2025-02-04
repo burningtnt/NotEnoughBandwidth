@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.modnetwork;
+package cn.ussshenzhou.notenoughbandwidth.network;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import cn.ussshenzhou.notenoughbandwidth.managers.PacketTypeIndexManager;

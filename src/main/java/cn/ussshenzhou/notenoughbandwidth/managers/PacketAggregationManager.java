@@ -1,7 +1,7 @@
 package cn.ussshenzhou.notenoughbandwidth.managers;
 
-import cn.ussshenzhou.notenoughbandwidth.helpers.DefaultChannelPipelineHelper;
-import cn.ussshenzhou.notenoughbandwidth.modnetwork.PacketAggregationPacket;
+import cn.ussshenzhou.notenoughbandwidth.network.ChannelPipeline;
+import cn.ussshenzhou.notenoughbandwidth.network.PacketAggregationPacket;
 import com.mojang.logging.LogUtils;
 import io.netty.channel.DefaultChannelPipeline;
 import net.minecraft.network.Connection;
@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author USS_Shenzhou
  */
 public class PacketAggregationManager {
-    private static final Object LOCK = new Object();
     private static final ConcurrentHashMap<ResourceLocation, ArrayDeque<AtomicInteger>> PACKET_FREQUENCY_COUNTER = new ConcurrentHashMap<>();
     private static final HashSet<ResourceLocation> TAKE_OVER_LIST = new HashSet<>() {{
         add(ResourceLocation.withDefaultNamespace("level_chunk_with_light"));
@@ -33,15 +32,31 @@ public class PacketAggregationManager {
     private static final int QUEUE_CAPACITY = Math.max(1000 / FLUSH_PERIOD_IN_MS, 2);
 
     public static void init() {
-        synchronized (LOCK) {
+        synchronized (PacketAggregationManager.class) {
             PACKET_FREQUENCY_COUNTER.clear();
             TAKE_OVER_LIST.clear();
             PACKET_BUFFER.clear();
             TASKS.forEach(task -> task.cancel(false));
             TASKS.clear();
             TASKS.add(TIMER.scheduleAtFixedRate(() -> {
-                synchronized (LOCK) {
-                    flush();
+                synchronized (PacketAggregationManager.class) {
+                    PACKET_BUFFER.forEach((connection, packetsMap) -> {
+                        var encoder = ChannelPipeline.getPacketEncoder((DefaultChannelPipeline) connection.channel().pipeline());
+                        if (encoder == null) {
+                            LogUtils.getLogger().error("Failed to get PacketEncoder of connection {} {}.", connection.getDirection(), connection.getRemoteAddress());
+                            return;
+                        }
+                        for (Map.Entry<ResourceLocation, ArrayList<Packet<?>>> entry : packetsMap.entrySet()) {
+                            ResourceLocation type = entry.getKey();
+                            ArrayList<Packet<?>> packets = entry.getValue();
+                            connection.send(connection.getSending() == PacketFlow.CLIENTBOUND
+                                    ? new ClientboundCustomPayloadPacket(new PacketAggregationPacket(type, packets, encoder.getProtocolInfo()))
+                                    : new ServerboundCustomPayloadPacket(new PacketAggregationPacket(type, packets, encoder.getProtocolInfo()))
+                            );
+                        }
+                        packetsMap.clear();
+                    });
+
                     for (var queue : PACKET_FREQUENCY_COUNTER.values()) {
                         if (queue.size() >= QUEUE_CAPACITY) {
                             queue.pollFirst();
@@ -54,7 +69,7 @@ public class PacketAggregationManager {
     }
 
     private static boolean isAggregating(ResourceLocation type) {
-        synchronized (LOCK) {
+        synchronized (PacketAggregationManager.class) {
             if (TAKE_OVER_LIST.contains(type)) {
                 return true;
             }
@@ -84,7 +99,7 @@ public class PacketAggregationManager {
     public static boolean aboutToSend(Packet<?> packet, Connection connection) {
         var type = packet.type().id();
         if (isAggregating(type)) {
-            synchronized (LOCK) {
+            synchronized (PacketAggregationManager.class) {
                 PACKET_BUFFER.computeIfAbsent(connection, c -> new HashMap<>())
                         .computeIfAbsent(type, t -> new ArrayList<>())
                         .add(packet);
@@ -92,26 +107,5 @@ public class PacketAggregationManager {
             return false;
         }
         return true;
-    }
-
-    public static void flush() {
-        synchronized (LOCK) {
-            PACKET_BUFFER.forEach((connection, packetsMap) -> {
-                var encoder = DefaultChannelPipelineHelper.getPacketEncoder((DefaultChannelPipeline) connection.channel().pipeline());
-                if (encoder == null) {
-                    LogUtils.getLogger().error("Failed to get PacketEncoder of connection {} {}.", connection.getDirection(), connection.getRemoteAddress());
-                    return;
-                }
-                for (Map.Entry<ResourceLocation, ArrayList<Packet<?>>> entry : packetsMap.entrySet()) {
-                    ResourceLocation type = entry.getKey();
-                    ArrayList<Packet<?>> packets = entry.getValue();
-                    connection.send(connection.getSending() == PacketFlow.CLIENTBOUND
-                            ? new ClientboundCustomPayloadPacket(new PacketAggregationPacket(type, packets, encoder.getProtocolInfo()))
-                            : new ServerboundCustomPayloadPacket(new PacketAggregationPacket(type, packets, encoder.getProtocolInfo()))
-                    );
-                }
-                packetsMap.clear();
-            });
-        }
     }
 }

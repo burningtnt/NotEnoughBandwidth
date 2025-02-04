@@ -5,9 +5,11 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "nebw.refmap.json",
   "mixins": [
+    "packets.ClientBoundCustomPayloadPacketMixin",
     "ConnectionMixin",
-    "CustomPacketPayloadMixin",
-    "NetworkRegistryMixin"
+    "GameProtocolsMixin",
+    "NetworkRegistryMixin",
+    "packets.ServerBoundCustomPayloadPacketMixin"
   ],
   "client": [
   ],
