@@ -5,13 +5,13 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "nebw.refmap.json",
   "mixins": [
-    "packets.ClientBoundCustomPayloadPacketMixin",
+    "ClientConfigurationPacketListenerImplMixin",
     "ConnectionMixin",
     "GameProtocolsMixin",
-    "NetworkRegistryMixin",
+    "NetworkFiltersMixin",
+    "ServerConfigurationPacketListenerImplMixin",
+    "packets.ClientBoundCustomPayloadPacketMixin",
     "packets.ServerBoundCustomPayloadPacketMixin"
-  ],
-  "client": [
   ],
   "injectors": {
     "defaultRequire": 1
