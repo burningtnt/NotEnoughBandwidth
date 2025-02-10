@@ -1,16 +1,9 @@
 package cn.ussshenzhou.notenoughbandwidth.network.indexed;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.network.registration.PayloadRegistration;
 
@@ -57,11 +50,12 @@ public final class IndexLookup {
 
         INSTANCE.set(new IndexLookup(packets));
     }
+
     private final Object2IntMap<String> namespaces2id;
 
     private final PathLookup[] id2namespaces;
-    private record PathLookup(String namespace, String[] id2path, Object2IntMap<String> path2id) {
 
+    private record PathLookup(String namespace, String[] id2path, Object2IntMap<String> path2id) {
     }
 
     public IndexLookup(Collection<ResourceLocation> p) {

@@ -1,85 +1,87 @@
 package cn.ussshenzhou.notenoughbandwidth.network;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
-import cn.ussshenzhou.notenoughbandwidth.network.compress.CompressedEncoder;
-import cn.ussshenzhou.notenoughbandwidth.network.compress.CompressedPacket;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.AggressiveBuffer;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
-import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
-import net.minecraft.network.ConnectionProtocol;
-import net.minecraft.network.PacketEncoder;
-import net.minecraft.network.PacketListener;
-import net.minecraft.network.codec.IdDispatchCodec;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.BundlePacket;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketType;
+import net.minecraft.network.protocol.common.CommonPacketTypes;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.protocol.game.GamePacketTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @EventBusSubscriber(modid = NotEnoughBandwidth.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class NetworkManager {
     private NetworkManager() {
     }
 
+    private static final Set<PacketType<? extends Packet<? extends ICommonPacketListener>>> BLACK_LIST = new HashSet<>();
+
+    static {
+        BLACK_LIST.add(GamePacketTypes.CLIENTBOUND_LOGIN);
+        BLACK_LIST.add(CommonPacketTypes.SERVERBOUND_KEEP_ALIVE);
+        BLACK_LIST.add(CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE);
+
+        if (ModList.get().isLoaded("neoforwarding")) {
+            BLACK_LIST.add(GamePacketTypes.CLIENTBOUND_COMMANDS);
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         IndexLookup.initialize();
     }
 
-    private static final AttributeKey<Boolean> CONFIGURATION_FINISHED = AttributeKey.valueOf(NotEnoughBandwidth.id("aggressive_flag").toString());
-
     public static void enable(Connection connection) {
-        connection.channel().attr(CONFIGURATION_FINISHED).set(Boolean.TRUE);
+        AggressiveBuffer.initialize(connection);
     }
 
-    public static CompressedEncoder.CompressedTransfer transferPackage(Connection connection, Packet<?> packet) {
-        if (connection.channel().attr(CONFIGURATION_FINISHED).get() == null) {
-            return null;
+    public static void tick(Connection connection) {
+        AggressiveBuffer buffer = AggressiveBuffer.get(connection);
+        if (buffer != null) {
+            buffer.tick();
+        }
+    }
+
+    public static boolean onSendPacket(Connection connection, Packet<?> packet) {
+        AggressiveBuffer buffer = AggressiveBuffer.get(connection);
+        if (buffer == null || BLACK_LIST.contains(packet.type())) {
+            return false;
         }
 
-        // #1: Wrap CustomPayload as IndexPacket.
-        if (packet instanceof VanillaCustomPayload pp) {
-            CustomPacketPayload payload = pp.payload();
-            ResourceLocation type = payload.type().id();
+        switch (packet) {
+            case VanillaCustomPayload pp -> {
+                CustomPacketPayload payload = pp.payload();
+                ResourceLocation type = payload.type().id();
 
-            switch (type.getNamespace()) {
-                case "c", "neoforge", "minecraft", "velocity" -> {
+                if (IndexLookup.getInstance().getIndex(type) != IndexLookup.EMPTY) {
+                    packet = new IndexPacket(switch (connection.getSending()) {
+                        case CLIENTBOUND -> IndexPacket.C_TYPE;
+                        case SERVERBOUND -> IndexPacket.S_TYPE;
+                    }, payload);
                 }
-                default -> {
-                    if (IndexLookup.getInstance().getIndex(type) != IndexLookup.EMPTY) {
-                        packet = new IndexPacket(switch (connection.getSending()) {
-                            case CLIENTBOUND -> IndexPacket.C_TYPE;
-                            case SERVERBOUND -> IndexPacket.S_TYPE;
-                        }, payload);
-                    }
+
+                buffer.push(packet);
+            }
+            case BundlePacket<?> bundle -> {
+                for (Packet<?> sub : bundle.subPackets()) {
+                    buffer.push(sub);
                 }
             }
+            default -> buffer.push(packet);
         }
-
-        List<Packet<?>> packets;
-        if (packet instanceof BundlePacket<?> bundle) {
-            packets = new ArrayList<>();
-            for (Packet<?> sub : bundle.subPackets()) {
-                packets.add(sub);
-            }
-        } else {
-            packets = List.of(packet);
-        }
-
-        // #2: Compress the packet.
-        return new CompressedEncoder.CompressedTransfer(switch (connection.getSending()) {
-            case CLIENTBOUND -> CompressedPacket.C_TYPE;
-            case SERVERBOUND -> CompressedPacket.S_TYPE;
-        }, packets);
+        return true;
     }
 }

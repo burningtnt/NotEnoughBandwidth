@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.network.compress;
+package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import io.netty.buffer.ByteBuf;
@@ -6,10 +6,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import net.minecraft.network.*;
+import net.minecraft.network.PacketEncoder;
+import net.minecraft.network.VarInt;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
-import net.neoforged.neoforge.network.connection.ConnectionUtils;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
