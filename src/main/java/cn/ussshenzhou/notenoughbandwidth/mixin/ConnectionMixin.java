@@ -1,11 +1,10 @@
 package cn.ussshenzhou.notenoughbandwidth.mixin;
 
 import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedDecoder;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedEncoder;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressDecoder;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
-import io.netty.channel.Channel;
 import net.minecraft.network.*;
 import net.minecraft.network.protocol.Packet;
 import org.jetbrains.annotations.Nullable;
@@ -50,7 +49,7 @@ public abstract class ConnectionMixin {
     ) {
         if (protocolInfo.id() == ConnectionProtocol.PLAY) {
             return original.andThen(context -> {
-                context.pipeline().addAfter("encoder", CompressedEncoder.ID, CompressedEncoder.INSTANCE);
+                context.pipeline().addAfter("encoder", CompressEncoder.ID, CompressEncoder.INSTANCE);
                 NetworkManager.enable((Connection) (Object) this);
             });
         }
@@ -67,7 +66,7 @@ public abstract class ConnectionMixin {
     ) {
         if (protocolInfo.id() == ConnectionProtocol.PLAY) {
             return original.andThen(context -> {
-                context.pipeline().addAfter("decoder", CompressedDecoder.ID, CompressedDecoder.INSTANCE);
+                context.pipeline().addAfter("decoder", CompressDecoder.ID, CompressDecoder.INSTANCE);
             });
         }
         return original;

@@ -1,7 +1,7 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedEncoder;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedPacket;
 import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
@@ -58,7 +58,7 @@ public final class AggressiveBuffer {
             return;
         }
 
-        this.connection.channel().writeAndFlush(new CompressedEncoder.CompressedTransfer(switch (this.connection.getSending()) {
+        this.connection.channel().writeAndFlush(new CompressEncoder.CompressedTransfer(switch (this.connection.getSending()) {
             case CLIENTBOUND -> CompressedPacket.C_TYPE;
             case SERVERBOUND -> CompressedPacket.S_TYPE;
         }, packets));

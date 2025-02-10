@@ -4,15 +4,14 @@ import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import net.minecraft.network.VarInt;
 
 import java.util.Objects;
 
-public final class CompressHandler {
+public final class CompressHelper {
     private static final int THRESHOLD = 160;
 
-    private CompressHandler() {
+    private CompressHelper() {
     }
 
     public static void compress(ByteBuf original, ByteBuf target) {
@@ -29,11 +28,11 @@ public final class CompressHandler {
 
             ByteBuf o2 = null, t2 = null;
             if (!original.isDirect()) {
-                o2 = Unpooled.directBuffer(size, size);
+                o2 = original.alloc().directBuffer(size, size);
                 o2.writeBytes(original, size);
             }
             if (!target.isDirect()) {
-                t2 = Unpooled.directBuffer(compressedSize, compressedSize);
+                t2 = target.alloc().directBuffer(compressedSize, compressedSize);
             }
 
             int realSize = compress0(Objects.requireNonNullElse(o2, original), Objects.requireNonNullElse(t2, target));
@@ -59,13 +58,13 @@ public final class CompressHandler {
         }
 
         int s2;
-        ByteBuf original = Unpooled.directBuffer(size, size);
+        ByteBuf original = compressed.alloc().directBuffer(size, size);
         if (compressed.isDirect()) {
             s2 = decompress0(compressed, original);
             compressed.skipBytes(compressed.readableBytes());
         } else {
             int remain = compressed.readableBytes();
-            ByteBuf direct = Unpooled.directBuffer(remain, remain);
+            ByteBuf direct = compressed.alloc().directBuffer(remain, remain);
             direct.readBytes(compressed, remain);
 
             s2 = decompress0(direct, original);

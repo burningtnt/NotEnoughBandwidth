@@ -2,7 +2,6 @@ package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -18,12 +17,12 @@ import java.util.Collection;
 import java.util.List;
 
 @ChannelHandler.Sharable
-public class CompressedEncoder extends MessageToMessageEncoder<CompressedEncoder.CompressedTransfer> {
+public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.CompressedTransfer> {
     public static final String ID = NotEnoughBandwidth.id("compressed_encoder").toString();
 
-    public static final CompressedEncoder INSTANCE = new CompressedEncoder();
+    public static final CompressEncoder INSTANCE = new CompressEncoder();
 
-    private CompressedEncoder() {
+    private CompressEncoder() {
     }
 
     public record CompressedTransfer(PacketType<CompressedPacket> type, Collection<Packet<?>> packets) {
@@ -44,11 +43,8 @@ public class CompressedEncoder extends MessageToMessageEncoder<CompressedEncoder
     @Override
     protected void encode(ChannelHandlerContext context, CompressedTransfer transfer, List<Object> out) {
         ChannelHandler encoder = context.pipeline().get("encoder");
-        if (encoder == null) {
-            return;
-        }
 
-        ByteBuf buf = Unpooled.directBuffer(), temp = Unpooled.buffer();
+        ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().buffer();
         for (Packet<?> packet : transfer.packets()) {
             ByteBuf t = temp.duplicate();
             try {
@@ -61,6 +57,13 @@ public class CompressedEncoder extends MessageToMessageEncoder<CompressedEncoder
             buf.writeBytes(t);
         }
 
-        out.add(new CompressedPacket(transfer.type(), buf));
+        try {
+            ENCODE.invokeExact((PacketEncoder<?>) encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), buf), temp);
+        } catch (Throwable t2) {
+            throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
+        }
+
+        buf.release();
+        out.add(temp);
     }
 }

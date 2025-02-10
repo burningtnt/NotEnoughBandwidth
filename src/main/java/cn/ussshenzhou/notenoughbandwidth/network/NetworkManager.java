@@ -5,6 +5,8 @@ import cn.ussshenzhou.notenoughbandwidth.network.aggressive.AggressiveBuffer;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
 import net.minecraft.network.Connection;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.BundlePacket;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
@@ -18,6 +20,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -41,6 +44,24 @@ public final class NetworkManager {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        // Register a unused fence to avoid mod mismatch exception.
+        event.registrar("1").configurationBidirectional(
+                new CustomPacketPayload.Type<>(NotEnoughBandwidth.id("fence")),
+                new StreamCodec<>() {
+                    @Override
+                    public @NotNull CustomPacketPayload decode(@NotNull FriendlyByteBuf buffer) {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public void encode(@NotNull FriendlyByteBuf buffer, @NotNull CustomPacketPayload value) {
+                        throw new UnsupportedOperationException();
+                    }
+                }, (payload, context) -> {
+                    throw new UnsupportedOperationException();
+                }
+        );
+
         IndexLookup.initialize();
     }
 

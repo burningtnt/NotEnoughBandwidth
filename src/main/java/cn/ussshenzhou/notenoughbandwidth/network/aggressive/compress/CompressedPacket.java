@@ -2,6 +2,7 @@ package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCounted;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -31,24 +32,23 @@ public record CompressedPacket(
     public static final PacketType<CompressedPacket> S_TYPE = new PacketType<>(PacketFlow.SERVERBOUND, NotEnoughBandwidth.id("c2s/compressed"));
     public static final PacketType<CompressedPacket> C_TYPE = new PacketType<>(PacketFlow.CLIENTBOUND, NotEnoughBandwidth.id("s2c/compressed"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, CompressedPacket> S_CODEC = ofCodec(S_TYPE);
-    public static final StreamCodec<RegistryFriendlyByteBuf, CompressedPacket> C_CODEC = ofCodec(C_TYPE);
+    public static final StreamCodec<RegistryFriendlyByteBuf, CompressedPacket> S_CODEC = ofCodec(S_TYPE), C_CODEC = ofCodec(C_TYPE);
 
     public static StreamCodec<RegistryFriendlyByteBuf, CompressedPacket> ofCodec(PacketType<CompressedPacket> type) {
         return new StreamCodec<>() {
             @Override
             public void encode(RegistryFriendlyByteBuf target, CompressedPacket packet) {
-                ByteBuf buf = packet.buf();
+                ByteBuf buf = packet.buf().retainedDuplicate();
                 try {
-                    CompressHandler.compress(buf.duplicate(), target);
+                    CompressHelper.compress(buf, target);
                 } finally {
-                    Reference.reachabilityFence(buf);
+                    buf.release();
                 }
             }
 
             @Override
             public CompressedPacket decode(RegistryFriendlyByteBuf compressed) {
-                return new CompressedPacket(type, CompressHandler.decompress(compressed));
+                return new CompressedPacket(type, CompressHelper.decompress(compressed));
             }
         };
     }
