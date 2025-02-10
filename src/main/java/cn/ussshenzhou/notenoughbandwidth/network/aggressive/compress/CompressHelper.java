@@ -65,7 +65,7 @@ public final class CompressHelper {
         } else {
             int remain = compressed.readableBytes();
             ByteBuf direct = compressed.alloc().directBuffer(remain, remain);
-            direct.readBytes(compressed, remain);
+            compressed.readBytes(direct, remain);
 
             s2 = decompress0(direct, original);
             direct.release();
