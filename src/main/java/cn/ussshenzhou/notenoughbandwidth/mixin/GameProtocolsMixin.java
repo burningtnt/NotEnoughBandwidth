@@ -1,6 +1,6 @@
 package cn.ussshenzhou.notenoughbandwidth.mixin;
 
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedPacket;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.ProtocolInfoBuilder;

@@ -1,6 +1,7 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,7 +45,7 @@ public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.Com
     protected void encode(ChannelHandlerContext context, CompressedTransfer transfer, List<Object> out) {
         ChannelHandler encoder = context.pipeline().get("encoder");
 
-        ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().buffer();
+        ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().directBuffer();
         for (Packet<?> packet : transfer.packets()) {
             ByteBuf t = temp.duplicate();
             try {
@@ -57,13 +58,14 @@ public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.Com
             buf.writeBytes(t);
         }
 
+        CompressContext.get(context).compress(buf, temp);
         try {
-            ENCODE.invokeExact((PacketEncoder<?>) encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), buf), temp);
+            ENCODE.invokeExact((PacketEncoder<?>) encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), temp), buf);
         } catch (Throwable t2) {
             throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
         }
 
-        buf.release();
-        out.add(temp);
+        temp.release();
+        out.add(buf);
     }
 }

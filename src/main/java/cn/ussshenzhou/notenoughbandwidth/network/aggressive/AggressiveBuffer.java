@@ -2,7 +2,7 @@ package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressedPacket;
+import com.mojang.logging.LogUtils;
 import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -48,7 +48,14 @@ public final class AggressiveBuffer {
     }
 
     private void flush() {
-        List<Packet<?>> packets = new ArrayList<>(buffer.size());
+        int size = buffer.size();
+        if (size == 0) {
+            return;
+        } else if (size > 200) {
+            LogUtils.getLogger().warn("A single connection is sending {} packets in a single tick!", size);
+        }
+
+        List<Packet<?>> packets = new ArrayList<>(size + 16);
         Packet<?> packet;
         while ((packet = buffer.poll()) != null) {
             packets.add(packet);

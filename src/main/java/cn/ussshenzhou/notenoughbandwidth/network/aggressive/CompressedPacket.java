@@ -1,8 +1,7 @@
-package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
+package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCounted;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,7 +12,6 @@ import net.minecraft.network.protocol.PacketType;
 import net.neoforged.fml.loading.FMLEnvironment;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.lang.ref.Reference;
 
 /**
  * <p>A packet that is considered to be compressed will be process as the graph below.</p>
@@ -39,8 +37,9 @@ public record CompressedPacket(
             @Override
             public void encode(RegistryFriendlyByteBuf target, CompressedPacket packet) {
                 ByteBuf buf = packet.buf().retainedDuplicate();
+                target.writeBytes(buf);
                 try {
-                    CompressHelper.compress(buf, target);
+                    target.writeBytes(buf);
                 } finally {
                     buf.release();
                 }
@@ -48,7 +47,7 @@ public record CompressedPacket(
 
             @Override
             public CompressedPacket decode(RegistryFriendlyByteBuf compressed) {
-                return new CompressedPacket(type, CompressHelper.decompress(compressed));
+                return new CompressedPacket(type, compressed.readBytes(compressed.readableBytes()));
             }
         };
     }

@@ -1,10 +1,12 @@
 package cn.ussshenzhou.notenoughbandwidth.mixin;
 
 import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressContext;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressDecoder;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
+import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.*;
 import net.minecraft.network.protocol.Packet;
 import org.jetbrains.annotations.Nullable;
@@ -32,6 +34,16 @@ public abstract class ConnectionMixin {
             this.sentPackets++;
             ci.cancel();
         }
+    }
+
+    @Inject(method = "channelActive", at = @At("TAIL"))
+    private void onChannelActive(ChannelHandlerContext context, CallbackInfo ci) {
+        CompressContext.initialize((Connection) (Object) this);
+    }
+
+    @Inject(method = "channelInactive", at = @At("TAIL"))
+    private void onChannelInactive(ChannelHandlerContext context, CallbackInfo ci) {
+        CompressContext.remove((Connection) (Object) this);
     }
 
     @Inject(method = "tick", at = @At("HEAD"))

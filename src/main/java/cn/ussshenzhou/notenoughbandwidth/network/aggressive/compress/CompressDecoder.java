@@ -1,6 +1,7 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,19 +39,19 @@ public class CompressDecoder extends MessageToMessageDecoder<CompressedPacket> {
     protected void decode(ChannelHandlerContext context, CompressedPacket msg, List<Object> out) {
         ChannelHandler decoder = context.pipeline().get("decoder");
 
-        ByteBuf buf = msg.buf();
+        ByteBuf buf = CompressContext.get(context).decompress(msg.buf());
         while (buf.readableBytes() != 0) {
             int length = VarInt.read(buf);
-            ByteBuf pkt = buf.slice(buf.readerIndex(), length).asReadOnly();
+            ByteBuf packet = buf.slice(buf.readerIndex(), length);
 
             try {
-                DECODE.invokeExact((PacketDecoder<?>) decoder, context, pkt, out);
+                DECODE.invokeExact((PacketDecoder<?>) decoder, context, packet, out);
             } catch (Throwable t2) {
                 throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
             }
 
-            if (pkt.readerIndex() != pkt.capacity()) {
-                throw new IllegalStateException();
+            if (packet.readerIndex() != packet.capacity()) {
+                throw new AssertionError("Should NOT reach here: PacketDecoder should consume all bytes, or throw an exception.");
             }
 
             buf.skipBytes(length);

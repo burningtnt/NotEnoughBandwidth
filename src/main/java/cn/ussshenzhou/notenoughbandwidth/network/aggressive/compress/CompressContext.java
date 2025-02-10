@@ -1,20 +1,46 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
+import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.AttributeKey;
+import net.minecraft.network.Connection;
 import net.minecraft.network.VarInt;
+import net.neoforged.neoforge.network.connection.ConnectionUtils;
 
 import java.util.Objects;
 
-public final class CompressHelper {
+public final class CompressContext {
     private static final int THRESHOLD = 160;
 
-    private CompressHelper() {
+    private final ZstdCompressCtx compress;
+    private final ZstdDecompressCtx decompress;
+
+    private CompressContext() {
+        this.compress = new ZstdCompressCtx().setLevel(Zstd.defaultCompressionLevel()).setChecksum(false).setMagicless(true);
+        this.decompress = new ZstdDecompressCtx().setMagicless(true);
     }
 
-    public static void compress(ByteBuf original, ByteBuf target) {
+    private static final AttributeKey<CompressContext> CONTEXT = AttributeKey.valueOf(NotEnoughBandwidth.id("compress_context").toString());
+
+    public static CompressContext get(ChannelHandlerContext context) {
+        return ConnectionUtils.getConnection(context).channel().attr(CONTEXT).get();
+    }
+
+    public static void initialize(Connection connection) {
+        connection.channel().attr(CONTEXT).setIfAbsent(new CompressContext());
+    }
+
+    public static void remove(Connection connection) {
+        CompressContext context = connection.channel().attr(CONTEXT).getAndSet(null);
+        context.compress.close();
+        context.decompress.close();
+    }
+
+    public void compress(ByteBuf original, ByteBuf target) {
         int size = original.readableBytes();
 
         if (size <= THRESHOLD) {
@@ -51,7 +77,7 @@ public final class CompressHelper {
         }
     }
 
-    public static ByteBuf decompress(ByteBuf compressed) {
+    public ByteBuf decompress(ByteBuf compressed) {
         int size = VarInt.read(compressed);
         if (size == 0) {
             return compressed.readBytes(compressed.readableBytes());
@@ -79,21 +105,17 @@ public final class CompressHelper {
         return original;
     }
 
-    private static int compress0(ByteBuf from, ByteBuf to) {
-        try (ZstdCompressCtx ctx = new ZstdCompressCtx()) {
-            return ctx.setLevel(Zstd.defaultCompressionLevel()).setChecksum(false).setMagicless(true).compress(
-                    to.nioBuffer(to.writerIndex(), to.writableBytes()),
-                    from.nioBuffer()
-            );
-        }
+    private int compress0(ByteBuf from, ByteBuf to) {
+        return compress.compress(
+                to.nioBuffer(to.writerIndex(), to.writableBytes()),
+                from.nioBuffer()
+        );
     }
 
-    private static int decompress0(ByteBuf from, ByteBuf to) {
-        try (ZstdDecompressCtx ctx = new ZstdDecompressCtx()) {
-            return ctx.setMagicless(true).decompress(
-                    to.nioBuffer(to.writerIndex(), to.writableBytes()),
-                    from.nioBuffer()
-            );
-        }
+    private int decompress0(ByteBuf from, ByteBuf to) {
+        return decompress.decompress(
+                to.nioBuffer(to.writerIndex(), to.writableBytes()),
+                from.nioBuffer()
+        );
     }
 }
