@@ -14,8 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GameProtocols.class)
 public class GameProtocolsMixin {
-    // Velocity will pass through packets with unknown ID.
-
     @Inject(
             method = "lambda$static$0",
             at = @At("TAIL")

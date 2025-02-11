@@ -13,14 +13,6 @@ import net.neoforged.fml.loading.FMLEnvironment;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-/**
- * <p>A packet that is considered to be compressed will be process as the graph below.</p>
- *
- * <p>1. Convert: Packets is converted to 'CompressedEncoder.CompressedTransfer'.</p>
- * <p>2. Delegate Encode: Packets is read by 'CompressedEncoder', which delegate the encoding process to 'PacketEncoder'.</p>
- * <p>3. Networking: Packets are compressed with ZSTD and sent by netty.</p>
- * <p>4. Handle: Packets are handled.</p>
- */
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
 public record CompressedPacket(

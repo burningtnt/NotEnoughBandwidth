@@ -15,13 +15,10 @@ import java.lang.invoke.MethodType;
 import java.util.List;
 
 @ChannelHandler.Sharable
-public class CompressDecoder extends MessageToMessageDecoder<CompressedPacket> {
+public final class CompressDecoder extends MessageToMessageDecoder<CompressedPacket> {
     public static final String ID = NotEnoughBandwidth.id("compressed_decoder").toString();
 
     public static final CompressDecoder INSTANCE = new CompressDecoder();
-
-    private CompressDecoder() {
-    }
 
     private static final MethodHandle DECODE;
 
@@ -35,9 +32,12 @@ public class CompressDecoder extends MessageToMessageDecoder<CompressedPacket> {
         }
     }
 
+    private CompressDecoder() {
+    }
+
     @Override
     protected void decode(ChannelHandlerContext context, CompressedPacket msg, List<Object> out) {
-        ChannelHandler decoder = context.pipeline().get("decoder");
+        PacketDecoder<?> decoder = (PacketDecoder<?>) context.pipeline().get("decoder");
 
         ByteBuf buf = CompressContext.get(context).decompress(msg.buf());
         while (buf.readableBytes() != 0) {
@@ -45,7 +45,7 @@ public class CompressDecoder extends MessageToMessageDecoder<CompressedPacket> {
             ByteBuf packet = buf.slice(buf.readerIndex(), length);
 
             try {
-                DECODE.invokeExact((PacketDecoder<?>) decoder, context, packet, out);
+                DECODE.invokeExact(decoder, context, packet, out);
             } catch (Throwable t2) {
                 throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
             }

@@ -2,6 +2,7 @@ package cn.ussshenzhou.notenoughbandwidth.network;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.AggressiveBuffer;
+import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
 import net.minecraft.network.Connection;
@@ -45,20 +46,21 @@ public final class NetworkManager {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         // Register a unused fence to avoid mod mismatch exception.
+        // This packet should NEVER be sent.
         event.registrar("1").configurationBidirectional(
                 new CustomPacketPayload.Type<>(NotEnoughBandwidth.id("fence")),
                 new StreamCodec<>() {
                     @Override
                     public @NotNull CustomPacketPayload decode(@NotNull FriendlyByteBuf buffer) {
-                        throw new UnsupportedOperationException();
+                        throw new AssertionError();
                     }
 
                     @Override
                     public void encode(@NotNull FriendlyByteBuf buffer, @NotNull CustomPacketPayload value) {
-                        throw new UnsupportedOperationException();
+                        throw new AssertionError();
                     }
                 }, (payload, context) -> {
-                    throw new UnsupportedOperationException();
+                    throw new AssertionError();
                 }
         );
 
@@ -83,6 +85,7 @@ public final class NetworkManager {
         }
 
         switch (packet) {
+            case CompressedPacket ignored -> throw new AssertionError();
             case VanillaCustomPayload pp -> {
                 CustomPacketPayload payload = pp.payload();
                 ResourceLocation type = payload.type().id();

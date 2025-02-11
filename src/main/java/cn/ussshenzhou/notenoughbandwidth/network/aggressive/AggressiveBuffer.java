@@ -7,15 +7,15 @@ import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class AggressiveBuffer {
     private static final long FLUSH_INTERVAL = 20; // (ms)
 
-    private final Queue<Packet<?>> buffer = new ArrayDeque<>();
+    private final Queue<Packet<?>> buffer = new ConcurrentLinkedQueue<>();
     private long lastTickTime = 0;
 
     private final Connection connection;

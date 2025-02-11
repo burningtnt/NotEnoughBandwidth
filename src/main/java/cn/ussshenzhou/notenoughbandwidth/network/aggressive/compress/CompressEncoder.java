@@ -18,16 +18,10 @@ import java.util.Collection;
 import java.util.List;
 
 @ChannelHandler.Sharable
-public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.CompressedTransfer> {
+public final class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.CompressedTransfer> {
     public static final String ID = NotEnoughBandwidth.id("compressed_encoder").toString();
 
     public static final CompressEncoder INSTANCE = new CompressEncoder();
-
-    private CompressEncoder() {
-    }
-
-    public record CompressedTransfer(PacketType<CompressedPacket> type, Collection<Packet<?>> packets) {
-    }
 
     private static final MethodHandle ENCODE;
 
@@ -41,15 +35,21 @@ public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.Com
         }
     }
 
+    private CompressEncoder() {
+    }
+
+    public record CompressedTransfer(PacketType<CompressedPacket> type, Collection<Packet<?>> packets) {
+    }
+
     @Override
     protected void encode(ChannelHandlerContext context, CompressedTransfer transfer, List<Object> out) {
-        ChannelHandler encoder = context.pipeline().get("encoder");
+        PacketEncoder<?> encoder = (PacketEncoder<?>) context.pipeline().get("encoder");
 
         ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().directBuffer();
         for (Packet<?> packet : transfer.packets()) {
             ByteBuf t = temp.duplicate();
             try {
-                ENCODE.invokeExact((PacketEncoder<?>) encoder, context, packet, t);
+                ENCODE.invokeExact(encoder, context, packet, t);
             } catch (Throwable t2) {
                 throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
             }
@@ -60,7 +60,7 @@ public class CompressEncoder extends MessageToMessageEncoder<CompressEncoder.Com
 
         CompressContext.get(context).compress(buf, temp);
         try {
-            ENCODE.invokeExact((PacketEncoder<?>) encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), temp), buf);
+            ENCODE.invokeExact(encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), temp), buf);
         } catch (Throwable t2) {
             throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
         }

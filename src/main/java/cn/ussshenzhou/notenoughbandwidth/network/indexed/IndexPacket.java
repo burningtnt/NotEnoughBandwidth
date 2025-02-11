@@ -29,13 +29,12 @@ import java.util.List;
  * <pre>
  * ┌------------- 1 byte (8 bits) ---------------┐
  * │               function flags                │
- * ├---┬---┬-------------------------------------┤
- * │ t │ g │          reserved (6 bits)          │
- * └---┴---┴-------------------------------------┘
+ * ├---┬-----------------------------------------┤
+ * │ t │            reserved (8 bits)            │
+ * └---┴-----------------------------------------┘
  *
  * t = tight_indexed (1 bit)
- * g = grouped (1 bit)
- * reserved = for future use (6 bits)
+ * reserved = for future use (8 bits)
  * </pre>
  *
  * <h4>Index Header (t)</h4>
@@ -63,10 +62,7 @@ import java.util.List;
  */
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-public record IndexPacket(
-        PacketType<IndexPacket> type,
-        CustomPacketPayload payload
-) implements Packet<PacketListener> {
+public record IndexPacket(PacketType<IndexPacket> type,CustomPacketPayload payload) implements Packet<PacketListener> {
     public static final PacketType<IndexPacket> S_TYPE = new PacketType<>(PacketFlow.SERVERBOUND, NotEnoughBandwidth.id("c2s/indexed"));
     public static final PacketType<IndexPacket> C_TYPE = new PacketType<>(PacketFlow.CLIENTBOUND, NotEnoughBandwidth.id("s2c/indexed"));
 

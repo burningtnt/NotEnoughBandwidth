@@ -12,7 +12,7 @@ import net.neoforged.fml.common.Mod;
 public class NotEnoughBandwidth {
     public static final String MODID = "nebw";
 
-    public NotEnoughBandwidth(IEventBus modEventBus, ModContainer modContainer) {
+    public NotEnoughBandwidth(IEventBus bus, ModContainer modContainer) {
     }
 
     public static ResourceLocation id(String path) {

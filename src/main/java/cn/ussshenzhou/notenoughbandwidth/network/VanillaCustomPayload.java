@@ -1,12 +1,9 @@
 package cn.ussshenzhou.notenoughbandwidth.network;
 
-import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-@MethodsReturnNonnullByDefault
-@ParametersAreNonnullByDefault
 public interface VanillaCustomPayload {
+    @NotNull
     CustomPacketPayload payload();
 }
