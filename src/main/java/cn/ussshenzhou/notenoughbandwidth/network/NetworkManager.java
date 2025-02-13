@@ -17,13 +17,13 @@ import net.minecraft.network.protocol.game.GamePacketTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @EventBusSubscriber(modid = NotEnoughBandwidth.MODID, bus = EventBusSubscriber.Bus.MOD)
@@ -31,17 +31,22 @@ public final class NetworkManager {
     private NetworkManager() {
     }
 
-    private static final Set<PacketType<? extends Packet<? extends ICommonPacketListener>>> BLACK_LIST = new HashSet<>();
+    private static final Set<PacketType<? extends Packet<? extends ICommonPacketListener>>> BLACK_LIST = new HashSet<>(List.of(
+            // For Velocity to switch protocol.
+            GamePacketTypes.CLIENTBOUND_LOGIN,
+            // For Velocity to keep connection.
+            CommonPacketTypes.SERVERBOUND_KEEP_ALIVE,
+            CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE,
 
-    static {
-        BLACK_LIST.add(GamePacketTypes.CLIENTBOUND_LOGIN);
-        BLACK_LIST.add(CommonPacketTypes.SERVERBOUND_KEEP_ALIVE);
-        BLACK_LIST.add(CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE);
+            GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS,
+            GamePacketTypes.CLIENTBOUND_COMMANDS,
+            GamePacketTypes.SERVERBOUND_CHAT_COMMAND,
+            GamePacketTypes.SERVERBOUND_CLIENT_COMMAND,
+            GamePacketTypes.SERVERBOUND_COMMAND_SUGGESTION,
 
-        if (ModList.get().isLoaded("neoforwarding")) {
-            BLACK_LIST.add(GamePacketTypes.CLIENTBOUND_COMMANDS);
-        }
-    }
+            GamePacketTypes.CLIENTBOUND_PLAYER_INFO_UPDATE,
+            GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE
+    ));
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

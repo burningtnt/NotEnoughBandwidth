@@ -2,7 +2,6 @@ package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
-import com.mojang.logging.LogUtils;
 import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -15,7 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class AggressiveBuffer {
     private static final long FLUSH_INTERVAL = 20; // (ms)
 
-    private final Queue<Packet<?>> buffer = new ConcurrentLinkedQueue<>();
+    private final Queue<Object> buffer = new ConcurrentLinkedQueue<>();
     private long lastTickTime = 0;
 
     private final Connection connection;
@@ -48,26 +47,38 @@ public final class AggressiveBuffer {
     }
 
     private void flush() {
-        int size = buffer.size();
-        if (size == 0) {
-            return;
-        } else if (size > 200) {
-            LogUtils.getLogger().warn("A single connection is sending {} packets in a single tick!", size);
-        }
-
-        List<Packet<?>> packets = new ArrayList<>(size + 16);
-        Packet<?> packet;
-        while ((packet = buffer.poll()) != null) {
-            packets.add(packet);
-        }
-
-        if (packets.isEmpty()) {
+        if (buffer.isEmpty()) {
             return;
         }
 
-        this.connection.channel().writeAndFlush(new CompressEncoder.CompressedTransfer(switch (this.connection.getSending()) {
-            case CLIENTBOUND -> CompressedPacket.C_TYPE;
-            case SERVERBOUND -> CompressedPacket.S_TYPE;
-        }, packets));
+        buffer.add(Boolean.TRUE);
+
+        while (true) {
+            List<Packet<?>> packets = new ArrayList<>(200);
+
+            Object packet;
+            while ((packet = buffer.poll()) != null) {
+                if (packet == Boolean.TRUE) {
+                    break;
+                } else {
+                    packets.add((Packet<?>) packet);
+
+                    if (packets.size() > 200) {
+                        break;
+                    }
+                }
+            }
+
+            if (!packets.isEmpty()) {
+                this.connection.channel().writeAndFlush(new CompressEncoder.CompressedTransfer(switch (this.connection.getSending()) {
+                    case CLIENTBOUND -> CompressedPacket.C_TYPE;
+                    case SERVERBOUND -> CompressedPacket.S_TYPE;
+                }, packets));
+            }
+
+            if (packet == Boolean.TRUE) {
+                return;
+            }
+        }
     }
 }
