@@ -5,7 +5,6 @@ import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.PacketListener;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
@@ -30,11 +29,11 @@ import java.util.List;
  * ┌------------- 1 byte (8 bits) ---------------┐
  * │               function flags                │
  * ├---┬-----------------------------------------┤
- * │ t │            reserved (8 bits)            │
+ * │ t │            reserved (7 bits)            │
  * └---┴-----------------------------------------┘
  *
  * t = tight_indexed (1 bit)
- * reserved = for future use (8 bits)
+ * reserved = for future use (7 bits)
  * </pre>
  *
  * <h4>Index Header (t)</h4>
@@ -66,13 +65,12 @@ public record IndexPacket(PacketType<IndexPacket> type,CustomPacketPayload paylo
     public static final PacketType<IndexPacket> S_TYPE = new PacketType<>(PacketFlow.SERVERBOUND, NotEnoughBandwidth.id("c2s/indexed"));
     public static final PacketType<IndexPacket> C_TYPE = new PacketType<>(PacketFlow.CLIENTBOUND, NotEnoughBandwidth.id("s2c/indexed"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, IndexPacket> S_CODEC = ofCodec(S_TYPE);
-    public static final StreamCodec<RegistryFriendlyByteBuf, IndexPacket> C_CODEC = ofCodec(C_TYPE);
+    public static final StreamCodec<FriendlyByteBuf, IndexPacket> S_CODEC = ofCodec(S_TYPE), C_CODEC = ofCodec(C_TYPE);
 
-    public static StreamCodec<RegistryFriendlyByteBuf, IndexPacket> ofCodec(PacketType<IndexPacket> packetType) {
+    public static StreamCodec<FriendlyByteBuf, IndexPacket> ofCodec(PacketType<IndexPacket> packetType) {
         return new StreamCodec<>() {
             @Override
-            public void encode(RegistryFriendlyByteBuf buf, IndexPacket packet) {
+            public void encode(FriendlyByteBuf buf, IndexPacket packet) {
                 ResourceLocation type = packet.payload().type().id();
 
                 IndexLookup.Result index = IndexLookup.getInstance().getIndex(type);
@@ -90,11 +88,13 @@ public record IndexPacket(PacketType<IndexPacket> type,CustomPacketPayload paylo
                 StreamCodec<? super FriendlyByteBuf, CustomPacketPayload> codec = getCodec(type);
                 if (codec != null) {
                     codec.encode(buf, packet.payload());
+                } else {
+                    throw new AssertionError("ResourceLocation " + type + " is unknown.");
                 }
             }
 
             @Override
-            public IndexPacket decode(RegistryFriendlyByteBuf buf) {
+            public IndexPacket decode(FriendlyByteBuf buf) {
                 int namespace, path;
                 if ((buf.readByte() & 0x80) != 0) {
                     namespace = buf.readUnsignedByte();

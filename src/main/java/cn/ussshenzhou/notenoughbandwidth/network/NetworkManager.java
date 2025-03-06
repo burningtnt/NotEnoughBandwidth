@@ -5,6 +5,7 @@ import cn.ussshenzhou.notenoughbandwidth.network.aggressive.AggressiveBuffer;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
 import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -15,15 +16,12 @@ import net.minecraft.network.protocol.common.CommonPacketTypes;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.GamePacketTypes;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @EventBusSubscriber(modid = NotEnoughBandwidth.MODID, bus = EventBusSubscriber.Bus.MOD)
@@ -31,10 +29,9 @@ public final class NetworkManager {
     private NetworkManager() {
     }
 
-    private static final Set<PacketType<? extends Packet<? extends ICommonPacketListener>>> BLACK_LIST = new HashSet<>(List.of(
-            // For Velocity to switch protocol.
+    private static final Set<PacketType<?>> BLACK_LIST = ImmutableSet.of(
             GamePacketTypes.CLIENTBOUND_LOGIN,
-            // For Velocity to keep connection.
+
             CommonPacketTypes.SERVERBOUND_KEEP_ALIVE,
             CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE,
 
@@ -46,13 +43,15 @@ public final class NetworkManager {
 
             GamePacketTypes.CLIENTBOUND_PLAYER_INFO_UPDATE,
             GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE
-    ));
+    );
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
+    @SubscribeEvent
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        // Register a unused fence to avoid mod mismatch exception.
+        // Register an unused fence to avoid mod mismatch exception.
         // This packet should NEVER be sent.
-        event.registrar("1").configurationBidirectional(
+        event.registrar(ModList.get().getModContainerById(NotEnoughBandwidth.MODID).orElseThrow(
+                () -> new AssertionError("Huh? Why is NotEnoughBandwidth absent?")
+        ).getModInfo().getVersion().toString()).configurationBidirectional(
                 new CustomPacketPayload.Type<>(NotEnoughBandwidth.id("fence")),
                 new StreamCodec<>() {
                     @Override
@@ -68,8 +67,10 @@ public final class NetworkManager {
                     throw new AssertionError();
                 }
         );
+    }
 
-        IndexLookup.initialize();
+    public static ResourceLocation getPacketType(Packet<?> packet) {
+        return packet instanceof VanillaCustomPayload payload ? payload.payload().type().id() : packet.type().id();
     }
 
     public static void enable(Connection connection) {
@@ -83,14 +84,23 @@ public final class NetworkManager {
         }
     }
 
+    public static void release(Connection connection) {
+        AggressiveBuffer.release(connection);
+    }
+
     public static boolean onSendPacket(Connection connection, Packet<?> packet) {
         AggressiveBuffer buffer = AggressiveBuffer.get(connection);
         if (buffer == null || BLACK_LIST.contains(packet.type())) {
             return false;
         }
 
+        translatePacket(connection, packet, buffer);
+        return true;
+    }
+
+    private static void translatePacket(Connection connection, Packet<?> packet, AggressiveBuffer buffer) {
         switch (packet) {
-            case CompressedPacket ignored -> throw new AssertionError();
+            case CompressedPacket ignored -> throw new AssertionError("CompressedPacket should NOT be pushed into the packet flow.");
             case VanillaCustomPayload pp -> {
                 CustomPacketPayload payload = pp.payload();
                 ResourceLocation type = payload.type().id();
@@ -106,11 +116,10 @@ public final class NetworkManager {
             }
             case BundlePacket<?> bundle -> {
                 for (Packet<?> sub : bundle.subPackets()) {
-                    buffer.push(sub);
+                    translatePacket(connection, sub, buffer);
                 }
             }
             default -> buffer.push(packet);
         }
-        return true;
     }
 }

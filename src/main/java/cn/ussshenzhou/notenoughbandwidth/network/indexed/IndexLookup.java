@@ -2,12 +2,9 @@ package cn.ussshenzhou.notenoughbandwidth.network.indexed;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.network.registration.PayloadRegistration;
 
-import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -28,19 +25,11 @@ public final class IndexLookup {
         return Objects.requireNonNullElse(instance, EMPTY_LOOKUP);
     }
 
-    @SuppressWarnings({"UnstableApiUsage", "unchecked"})
-    public static void initialize() {
-        Map<ConnectionProtocol, Map<ResourceLocation, PayloadRegistration<?>>> payloads;
-        try {
-            payloads = (Map<ConnectionProtocol, Map<ResourceLocation, PayloadRegistration<?>>>)
-                    MethodHandles.privateLookupIn(NetworkRegistry.class, MethodHandles.lookup())
-                            .findStaticVarHandle(NetworkRegistry.class, "PAYLOAD_REGISTRATIONS", Map.class).get();
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-
+    @SuppressWarnings({"UnstableApiUsage"})
+    public static void initialize(Map<ResourceLocation, PayloadRegistration<?>> payloads) {
         Set<ResourceLocation> packets = new HashSet<>();
-        for (PayloadRegistration<?> registration : payloads.get(ConnectionProtocol.PLAY).values()) {
+        for (PayloadRegistration<?> registration : payloads.values()) {
+            // TODO: How to deal with optional packets? Here we assume they are rare.
             if (registration.optional()) {
                 continue;
             }

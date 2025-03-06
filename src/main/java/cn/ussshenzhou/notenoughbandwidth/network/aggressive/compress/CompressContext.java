@@ -1,43 +1,49 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.AttributeKey;
-import net.minecraft.network.Connection;
 import net.minecraft.network.VarInt;
-import net.neoforged.neoforge.network.connection.ConnectionUtils;
 
+import java.lang.ref.Cleaner;
 import java.util.Objects;
 
 public final class CompressContext {
     private static final int THRESHOLD = 160;
 
+    private static final Cleaner CLEANER = Cleaner.create();
+    private static final ThreadLocal<CompressContext> CONTEXT = ThreadLocal.withInitial(CompressContext::new);
+
+    public static CompressContext get() {
+        return CONTEXT.get();
+    }
+
     private final ZstdCompressCtx compress;
     private final ZstdDecompressCtx decompress;
 
+    @SuppressWarnings({"unused", "FieldCanBeLocal"}) // Keep a reference only.
+    private final Cleaner.Cleanable cleanable;
+
     private CompressContext() {
-        this.compress = new ZstdCompressCtx().setLevel(Zstd.defaultCompressionLevel()).setChecksum(false).setMagicless(true);
-        this.decompress = new ZstdDecompressCtx().setMagicless(true);
+        this.compress = new ZstdCompressCtx()
+                .setLevel(Zstd.defaultCompressionLevel())
+                .setChecksum(false)
+                .setMagicless(true);
+        this.decompress = new ZstdDecompressCtx()
+                .setMagicless(true);
+
+        // TODO: We use Cleaner to close unused context for now. Maybe use a better implementation instead?
+        this.cleanable = CLEANER.register(this, new CleanableImpl(compress::close, decompress::close));
     }
 
-    private static final AttributeKey<CompressContext> CONTEXT = AttributeKey.valueOf(NotEnoughBandwidth.id("compress_context").toString());
-
-    public static CompressContext get(ChannelHandlerContext context) {
-        return ConnectionUtils.getConnection(context).channel().attr(CONTEXT).get();
-    }
-
-    public static void initialize(Connection connection) {
-        connection.channel().attr(CONTEXT).setIfAbsent(new CompressContext());
-    }
-
-    public static void remove(Connection connection) {
-        CompressContext context = connection.channel().attr(CONTEXT).getAndSet(null);
-        context.compress.close();
-        context.decompress.close();
+    private record CleanableImpl(Runnable... targets) implements Runnable {
+        @Override
+        public void run() {
+            for (Runnable target : targets) {
+                target.run();
+            }
+        }
     }
 
     public void compress(ByteBuf original, ByteBuf target) {

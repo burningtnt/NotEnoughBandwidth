@@ -1,14 +1,14 @@
 package cn.ussshenzhou.notenoughbandwidth.mixin;
 
 import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressContext;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressDecoder;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import net.minecraft.network.*;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,36 +19,35 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * @author USS_Shenzhou
  */
-@Mixin(value = Connection.class)
+@Mixin(Connection.class)
 public abstract class ConnectionMixin {
     @Shadow
     private int sentPackets;
 
     @Inject(method = "sendPacket", at = @At("HEAD"), cancellable = true)
     private void onSendPacket(Packet<?> packet, @Nullable PacketSendListener sendListener, boolean flush, CallbackInfo ci) {
-        if (sendListener != null) {
-            return;
-        }
-
-        if (NetworkManager.onSendPacket((Connection) (Object) this, packet)) {
+        if (packet.isTerminal()) {
+            NetworkManager.release((Connection) (Object) this);
+        } else if (sendListener == null && NetworkManager.onSendPacket((Connection) (Object) this, packet)) {
             this.sentPackets++;
             ci.cancel();
         }
     }
 
-    @Inject(method = "channelActive", at = @At("TAIL"))
-    private void onChannelActive(ChannelHandlerContext context, CallbackInfo ci) {
-        CompressContext.initialize((Connection) (Object) this);
-    }
-
-    @Inject(method = "channelInactive", at = @At("TAIL"))
-    private void onChannelInactive(ChannelHandlerContext context, CallbackInfo ci) {
-        CompressContext.remove((Connection) (Object) this);
-    }
-
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         NetworkManager.tick((Connection) (Object) this);
+    }
+
+    @Inject(method = "configureSerialization", at = @At("TAIL"))
+    private static void onConfigureSerialization(ChannelPipeline pipeline, PacketFlow flow, boolean memoryOnly, BandwidthDebugMonitor bandwithDebugMonitor, CallbackInfo ci) {
+        if (pipeline.get("encoder") instanceof PacketEncoder<?>) {
+            pipeline.addAfter("encoder", CompressEncoder.ID, CompressEncoder.INSTANCE);
+        }
+
+        if (pipeline.get("decoder") instanceof PacketDecoder<?>) {
+            pipeline.addAfter("decoder", CompressDecoder.ID, CompressDecoder.INSTANCE);
+        }
     }
 
     @ModifyExpressionValue(method = "setupOutboundProtocol", at = @At(
@@ -59,13 +58,13 @@ public abstract class ConnectionMixin {
             UnconfiguredPipelineHandler.OutboundConfigurationTask original,
             @Local(index = 1, argsOnly = true) ProtocolInfo<?> protocolInfo
     ) {
-        if (protocolInfo.id() == ConnectionProtocol.PLAY) {
-            return original.andThen(context -> {
-                context.pipeline().addAfter("encoder", CompressEncoder.ID, CompressEncoder.INSTANCE);
+        return original.andThen(context -> {
+            context.pipeline().addAfter("encoder", CompressEncoder.ID, CompressEncoder.INSTANCE);
+
+            if (protocolInfo.id() == ConnectionProtocol.PLAY) {
                 NetworkManager.enable((Connection) (Object) this);
-            });
-        }
-        return original;
+            }
+        });
     }
 
     @ModifyExpressionValue(method = "setupInboundProtocol", at = @At(
@@ -76,11 +75,8 @@ public abstract class ConnectionMixin {
             UnconfiguredPipelineHandler.InboundConfigurationTask original,
             @Local(index = 1, argsOnly = true) ProtocolInfo<?> protocolInfo
     ) {
-        if (protocolInfo.id() == ConnectionProtocol.PLAY) {
-            return original.andThen(context -> {
-                context.pipeline().addAfter("decoder", CompressDecoder.ID, CompressDecoder.INSTANCE);
-            });
-        }
-        return original;
+        return original.andThen(context -> {
+            context.pipeline().addAfter("decoder", CompressDecoder.ID, CompressDecoder.INSTANCE);
+        });
     }
 }

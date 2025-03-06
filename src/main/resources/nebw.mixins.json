@@ -2,13 +2,15 @@
   "required": true,
   "minVersion": "0.8",
   "package": "cn.ussshenzhou.notenoughbandwidth.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "nebw.refmap.json",
   "mixins": [
     "ConnectionMixin",
+    "CustomPayloadPacketMixin",
     "GameProtocolsMixin",
-    "packets.ClientBoundCustomPayloadPacketMixin",
-    "packets.ServerBoundCustomPayloadPacketMixin"
+    "ProtocolSwapHandlerMixin",
+    "nf.GenericPacketSplitterMixin",
+    "nf.NetworkRegistryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

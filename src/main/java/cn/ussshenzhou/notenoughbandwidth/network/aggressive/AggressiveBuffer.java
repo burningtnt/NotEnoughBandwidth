@@ -2,9 +2,12 @@ package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
+import com.mojang.logging.LogUtils;
+import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +29,17 @@ public final class AggressiveBuffer {
     private static final AttributeKey<AggressiveBuffer> BUFFER = AttributeKey.valueOf(NotEnoughBandwidth.id("buffer").toString());
 
     public static void initialize(Connection connection) {
-        connection.channel().attr(BUFFER).set(new AggressiveBuffer(connection));
+        AggressiveBuffer current = connection.channel().attr(BUFFER).setIfAbsent(new AggressiveBuffer(connection));
+        if (current != null && !current.buffer.isEmpty()) {
+            throw new IllegalStateException("Packets in the buffer hasn't been sent!");
+        }
+    }
+
+    public static void release(Connection connection) {
+        AggressiveBuffer current = connection.channel().attr(BUFFER).getAndSet(null);
+        if (current != null) {
+            current.flush();
+        }
     }
 
     public static AggressiveBuffer get(Connection connection) {

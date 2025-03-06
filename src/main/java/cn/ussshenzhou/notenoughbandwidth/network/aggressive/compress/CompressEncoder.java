@@ -1,6 +1,7 @@
 package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
 
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
+import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
 import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
@@ -54,11 +55,14 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
                 throw t2 instanceof RuntimeException re ? re : new RuntimeException(t2);
             }
 
-            VarInt.write(buf, t.writerIndex());
+            int size = t.writerIndex();
+            NotEnoughBandwidth.PROFILER.onSendPacket(NetworkManager.getPacketType(packet), size);
+
+            VarInt.write(buf, size);
             buf.writeBytes(t);
         }
 
-        CompressContext.get(context).compress(buf, temp);
+        CompressContext.get().compress(buf, temp);
         try {
             ENCODE.invokeExact(encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), temp), buf);
         } catch (Throwable t2) {
