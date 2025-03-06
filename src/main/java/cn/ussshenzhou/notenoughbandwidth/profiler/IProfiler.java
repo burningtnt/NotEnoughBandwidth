@@ -8,9 +8,9 @@ public interface IProfiler {
     void onReceivePacket(ResourceLocation type, int size);
 
     static IProfiler getInstance() {
-        String profiler = System.getProperty("neb.profiler", "dummy");
-        return switch (profiler) {
-            case "dummy" -> new IProfiler() {
+        String port = System.getenv("NEB_PROM_PORT");
+        if (port == null) {
+            return new IProfiler() {
                 @Override
                 public void onSendPacket(ResourceLocation type, int size) {
                 }
@@ -19,8 +19,8 @@ public interface IProfiler {
                 public void onReceivePacket(ResourceLocation type, int size) {
                 }
             };
-            case "prometheus" -> new PrometheusProfiler();
-            default -> throw new IllegalStateException("Unsupported profiler: " + profiler);
-        };
+        }
+
+        return new PrometheusProfiler(Integer.parseInt(port));
     }
 }

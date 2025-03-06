@@ -11,9 +11,7 @@ public final class PrometheusProfiler implements IProfiler {
     private final Counter SENT = Counter.build("neb_sent_total", "Total size of sent packets.").labelNames("id").register();
     private final Counter RECEIVED = Counter.build("neb_received_total", "Total size of received packets.").labelNames("id").register();
 
-    public PrometheusProfiler() {
-        int port = Integer.parseInt(System.getProperty("neb.profiler.prometheus.port", "9400"));
-
+    public PrometheusProfiler(int port) {
         HTTPServer.Builder builder = new HTTPServer.Builder()
                 .withPort(port)
                 .withDaemonThreads(true);
