@@ -70,7 +70,11 @@ public final class NetworkManager {
     }
 
     public static ResourceLocation getPacketType(Packet<?> packet) {
-        return packet instanceof VanillaCustomPayload payload ? payload.payload().type().id() : packet.type().id();
+        return switch (packet) {
+            case VanillaCustomPayload payload -> payload.payload().type().id();
+            case IndexPacket(PacketType<IndexPacket> ignored, CustomPacketPayload payload) -> payload.type().id();
+            default -> packet.type().id();
+        };
     }
 
     public static void enable(Connection connection) {

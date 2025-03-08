@@ -7,10 +7,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.VarInt;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
+import net.minecraft.resources.ResourceLocation;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -36,6 +39,8 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
         }
     }
 
+    private static final ThreadLocal<Object2IntMap<ResourceLocation>> SIZES = ThreadLocal.withInitial(Object2IntOpenHashMap::new);
+
     private CompressEncoder() {
     }
 
@@ -46,7 +51,9 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
     protected void encode(ChannelHandlerContext context, CompressedTransfer transfer, List<Object> out) {
         PacketEncoder<?> encoder = (PacketEncoder<?>) context.pipeline().get("encoder");
 
+        Object2IntMap<ResourceLocation> sizes = SIZES.get();
         ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().directBuffer();
+
         for (Packet<?> packet : transfer.packets()) {
             ByteBuf t = temp.duplicate();
             try {
@@ -56,13 +63,19 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
             }
 
             int size = t.writerIndex();
-            NotEnoughBandwidth.PROFILER.onSendPacket(NetworkManager.getPacketType(packet), size);
+            ResourceLocation type = NetworkManager.getPacketType(packet);
 
+            sizes.put(type, sizes.getOrDefault(type, 0) + size);
             VarInt.write(buf, size);
             buf.writeBytes(t);
         }
 
         CompressContext.get().compress(buf, temp);
+        if (buf.writerIndex() != 0) {
+            NotEnoughBandwidth.PROFILER.onTransmitPacket(sizes, temp.writerIndex(), (double) temp.writerIndex() / buf.writerIndex());
+        }
+        sizes.clear();
+
         try {
             ENCODE.invokeExact(encoder, context, (Packet<?>) new CompressedPacket(transfer.type(), temp), buf);
         } catch (Throwable t2) {

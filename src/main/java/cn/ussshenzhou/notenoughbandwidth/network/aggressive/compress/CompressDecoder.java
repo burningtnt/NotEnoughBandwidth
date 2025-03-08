@@ -7,9 +7,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.PacketDecoder;
 import net.minecraft.network.VarInt;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.resources.ResourceLocation;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -34,6 +37,8 @@ public final class CompressDecoder extends MessageToMessageDecoder<CompressedPac
         }
     }
 
+    private static final ThreadLocal<Object2IntMap<ResourceLocation>> SIZES = ThreadLocal.withInitial(Object2IntOpenHashMap::new);
+
     private CompressDecoder() {
     }
 
@@ -41,6 +46,7 @@ public final class CompressDecoder extends MessageToMessageDecoder<CompressedPac
     protected void decode(ChannelHandlerContext context, CompressedPacket msg, List<Object> out) {
         PacketDecoder<?> decoder = (PacketDecoder<?>) context.pipeline().get("decoder");
 
+        Object2IntMap<ResourceLocation> sizes = SIZES.get();
         ByteBuf buf = CompressContext.get().decompress(msg.buf());
         while (buf.readableBytes() != 0) {
             int length = VarInt.read(buf);
@@ -59,11 +65,19 @@ public final class CompressDecoder extends MessageToMessageDecoder<CompressedPac
             buf.skipBytes(length);
 
             switch (out.size() - size) {
-                case 0 -> {}
-                case 1 -> NotEnoughBandwidth.PROFILER.onReceivePacket(NetworkManager.getPacketType((Packet<?>) out.getLast()), length);
+                case 0 -> {
+                }
+                case 1 -> {
+                    ResourceLocation type = NetworkManager.getPacketType((Packet<?>) out.getLast());
+                    sizes.put(type, sizes.getOrDefault(type, 0) + packet.writerIndex());
+                }
                 default -> throw new AssertionError("PacketDecoder should only push one packet.");
             }
         }
+
+        NotEnoughBandwidth.PROFILER.onReceivePacket(sizes, msg.buf().writerIndex(), (double) buf.writerIndex() / msg.buf().writerIndex());
+        sizes.clear();
         buf.release();
+        msg.buf().release();
     }
 }
