@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public final class PrometheusProfiler implements IProfiler {
     private final Counter TRANSMIT = Counter.build("neb_sent_total", "Total size of sent packets.").labelNames("id").register();
+    private final Counter TRANSMIT_COMPRESSED = Counter.build("neb_sent_compressed_bytes_total", "Total size (compressed) of sent packets.").register();
     private final Counter RECEIVE = Counter.build("neb_received_total", "Total size of received packets.").labelNames("id").register();
     private final Gauge COMPRESSIBILITY = Gauge.build("neb_compressibility", "The compressibility of all transmit/received packets.").labelNames("id").register();
 
@@ -34,19 +35,23 @@ public final class PrometheusProfiler implements IProfiler {
     }
 
     @Override
-    public void onTransmitPacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressibility) {
-        record(TRANSMIT, originalSizes, totalSize, compressibility);
+    public void onTransmitPacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressedSize){
+        double compressibility = Math.clamp(compressedSize / totalSize, 0, 1);
+
+        TRANSMIT_COMPRESSED.inc(compressedSize);
+        for (Object2IntMap.Entry<ResourceLocation> entry : Object2IntMaps.fastIterable(originalSizes)) {
+            String packetType = entry.getKey().toString();
+            COMPRESSIBILITY.labels(packetType).set(
+                    TRACKING.computeIfAbsent(entry.getKey(), rl -> new PacketCompressibility())
+                            .putSample(compressibility, entry.getIntValue() / totalSize)
+            );
+            TRANSMIT.labels(packetType).inc(entry.getIntValue());
+        }
     }
 
     @Override
-    public void onReceivePacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressibility) {
-        record(RECEIVE, originalSizes, totalSize, compressibility);
-    }
-
-    private void record(Counter counter, Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressibility) {
-        if (Double.isNaN(compressibility) || compressibility <= 0D || compressibility >= 1D) {
-            throw new IllegalArgumentException("Illegal argument compressibility: " + compressibility);
-        }
+    public void onReceivePacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressedSize) {
+        double compressibility = Math.clamp(compressedSize / totalSize, 0, 1);
 
         for (Object2IntMap.Entry<ResourceLocation> entry : Object2IntMaps.fastIterable(originalSizes)) {
             String packetType = entry.getKey().toString();
@@ -54,7 +59,7 @@ public final class PrometheusProfiler implements IProfiler {
                     TRACKING.computeIfAbsent(entry.getKey(), rl -> new PacketCompressibility())
                             .putSample(compressibility, entry.getIntValue() / totalSize)
             );
-            counter.labels(packetType).inc(entry.getIntValue());
+            RECEIVE.labels(packetType).inc(entry.getIntValue());
         }
     }
 }

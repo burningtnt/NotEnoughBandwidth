@@ -72,7 +72,7 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
 
         CompressContext.get().compress(buf, temp);
         if (buf.writerIndex() != 0) {
-            NotEnoughBandwidth.PROFILER.onTransmitPacket(sizes, temp.writerIndex(), (double) temp.writerIndex() / buf.writerIndex());
+            NotEnoughBandwidth.PROFILER.onTransmitPacket(sizes, buf.writerIndex(), temp.writerIndex());
         }
         sizes.clear();
 

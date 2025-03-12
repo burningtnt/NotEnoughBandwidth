@@ -75,7 +75,7 @@ public final class CompressDecoder extends MessageToMessageDecoder<CompressedPac
             }
         }
 
-        NotEnoughBandwidth.PROFILER.onReceivePacket(sizes, msg.buf().writerIndex(), (double) buf.writerIndex() / msg.buf().writerIndex());
+        NotEnoughBandwidth.PROFILER.onReceivePacket(sizes, buf.writerIndex(), msg.buf().writerIndex());
         sizes.clear();
         buf.release();
         msg.buf().release();
