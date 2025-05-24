@@ -1,13 +1,11 @@
-package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
+package org.teacon.neb.network.aggressive;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
-import com.mojang.logging.LogUtils;
-import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import org.teacon.neb.NotEnoughBandwidth;
+import org.teacon.neb.network.aggressive.compress.CompressEncoder;
 import io.netty.util.AttributeKey;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
-import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +15,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class AggressiveBuffer {
     private static final long FLUSH_INTERVAL = 20; // (ms)
 
-    private final Queue<Object> buffer = new ConcurrentLinkedQueue<>();
+    private final Queue<Packet<?>> buffer = new ConcurrentLinkedQueue<>();
     private long lastTickTime = 0;
 
     private final Connection connection;
@@ -28,22 +26,26 @@ public final class AggressiveBuffer {
 
     private static final AttributeKey<AggressiveBuffer> BUFFER = AttributeKey.valueOf(NotEnoughBandwidth.id("buffer").toString());
 
+    private static Attribute<AggressiveBuffer> accessAB(Connection connection) {
+        return connection.channel().attr(BUFFER);
+    }
+
     public static void initialize(Connection connection) {
-        AggressiveBuffer current = connection.channel().attr(BUFFER).setIfAbsent(new AggressiveBuffer(connection));
+        AggressiveBuffer current = accessAB(connection).setIfAbsent(new AggressiveBuffer(connection));
         if (current != null && !current.buffer.isEmpty()) {
-            throw new IllegalStateException("Packets in the buffer hasn't been sent!");
+            throw new IllegalStateException("Packets in the buffer has been sent!");
         }
     }
 
     public static void release(Connection connection) {
-        AggressiveBuffer current = connection.channel().attr(BUFFER).getAndSet(null);
+        AggressiveBuffer current = accessAB(connection).getAndSet(null);
         if (current != null) {
             current.flush();
         }
     }
 
     public static AggressiveBuffer get(Connection connection) {
-        return connection.channel().attr(BUFFER).get();
+        return accessAB(connection).get();
     }
 
     public void push(Packet<?> packet) {
@@ -64,22 +66,12 @@ public final class AggressiveBuffer {
             return;
         }
 
-        buffer.add(Boolean.TRUE);
-
         while (true) {
             List<Packet<?>> packets = new ArrayList<>(200);
 
-            Object packet;
-            while ((packet = buffer.poll()) != null) {
-                if (packet == Boolean.TRUE) {
-                    break;
-                } else {
-                    packets.add((Packet<?>) packet);
-
-                    if (packets.size() > 200) {
-                        break;
-                    }
-                }
+            Packet<?> packet = null;
+            while (packets.size() < 200 && (packet = buffer.poll()) != null) {
+                packets.add(packet);
             }
 
             if (!packets.isEmpty()) {
@@ -89,8 +81,8 @@ public final class AggressiveBuffer {
                 }, packets));
             }
 
-            if (packet == Boolean.TRUE) {
-                return;
+            if (packet == null) {
+                break;
             }
         }
     }

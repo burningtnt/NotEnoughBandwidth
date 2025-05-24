@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.network;
+package org.teacon.neb.network;
 
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.jetbrains.annotations.NotNull;

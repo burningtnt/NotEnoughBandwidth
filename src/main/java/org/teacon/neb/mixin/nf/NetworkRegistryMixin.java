@@ -1,6 +1,6 @@
-package cn.ussshenzhou.notenoughbandwidth.mixin.nf;
+package org.teacon.neb.mixin.nf;
 
-import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
+import org.teacon.neb.network.indexed.IndexLookup;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;

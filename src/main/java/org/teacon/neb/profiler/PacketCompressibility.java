@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.profiler;
+package org.teacon.neb.profiler;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -12,7 +12,7 @@ public final class PacketCompressibility {
 
     // TODO: After Valhalla is released, turn to value record instead.
     private final double[] samples = new double[SAMPLE * 2]; // value1, weight1, value2, weight2, ...
-    private static final VarHandle SAMPLES_VH = MethodHandles.arrayElementVarHandle(double[].class);
+    private static final VarHandle SAMPLES_VH = MethodHandles.arrayElementVarHandle(double[].class).withInvokeExactBehavior();
 
     private volatile int index = 0;
     private volatile double totalValue = 0D, totalWeight = 0D;

@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.network.indexed;
+package org.teacon.neb.network.indexed;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -7,11 +7,9 @@ import net.neoforged.neoforge.network.registration.PayloadRegistration;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 public final class IndexLookup {
     private static final int EMPTY_INT = -2;
-    private static final Comparator<String> COMPARATOR = Comparator.comparing(Function.identity());
 
     private static final IndexLookup EMPTY_LOOKUP = new IndexLookup(Collections.emptySet());
     private static final AtomicReference<IndexLookup> INSTANCE = new AtomicReference<>();
@@ -29,7 +27,7 @@ public final class IndexLookup {
     public static void initialize(Map<ResourceLocation, PayloadRegistration<?>> payloads) {
         Set<ResourceLocation> packets = new HashSet<>();
         for (PayloadRegistration<?> registration : payloads.values()) {
-            // TODO: How to deal with optional packets? Here we assume they are rare.
+            // TODO: How to deal with optional packets?
             if (registration.optional()) {
                 continue;
             }
@@ -44,10 +42,10 @@ public final class IndexLookup {
 
     private final PathLookup[] id2namespaces;
 
-    private record PathLookup(String namespace, String[] id2path, Object2IntMap<String> path2id) {
+    private record PathLookup(ResourceLocation[] id2RL, Object2IntMap<String> path2id) {
     }
 
-    public IndexLookup(Collection<ResourceLocation> p) {
+    private IndexLookup(Collection<ResourceLocation> p) {
         Map<String, List<String>> packets = new HashMap<>();
         for (ResourceLocation type : p) {
             packets.computeIfAbsent(type.getNamespace(), _0 -> new ArrayList<>()).add(type.getPath());
@@ -62,34 +60,33 @@ public final class IndexLookup {
         id2namespaces = new PathLookup[packets.size()];
 
         List<String> namespaces = new ArrayList<>(packets.keySet());
-        namespaces.sort(COMPARATOR);
+        namespaces.sort(null);
         for (int i = 0; i < namespaces.size(); i++) {
             String namespace = namespaces.get(i);
-
 
             List<String> paths = packets.get(namespace);
             if (paths.size() > 4096) {
                 throw new IllegalStateException("Too many paths for namespace " + namespace);
             }
-            paths.sort(COMPARATOR);
+            paths.sort(null);
 
-            String[] id2path = new String[paths.size()];
+            ResourceLocation[] id2RL = new ResourceLocation[paths.size()];
             Object2IntMap<String> path2id = new Object2IntOpenHashMap<>();
             path2id.defaultReturnValue(EMPTY_INT);
 
             for (int j = 0; j < paths.size(); j++) {
                 String path = paths.get(j);
 
-                id2path[j] = path;
+                id2RL[j] = ResourceLocation.fromNamespaceAndPath(namespace, path);
                 path2id.put(path, j);
             }
 
-            id2namespaces[i] = new PathLookup(namespace, id2path, path2id);
+            id2namespaces[i] = new PathLookup(id2RL, path2id);
             namespaces2id.put(namespace, i);
         }
     }
 
-    public record Result(int namespace, int path) {
+    public /* data */ record Result(int namespace, int path) {
     }
 
     public static final Result EMPTY = new Result(EMPTY_INT, EMPTY_INT);
@@ -109,7 +106,6 @@ public final class IndexLookup {
     }
 
     public ResourceLocation getType(int namespace, int path) {
-        PathLookup lookup = id2namespaces[namespace];
-        return ResourceLocation.fromNamespaceAndPath(lookup.namespace, lookup.id2path[path]);
+        return id2namespaces[namespace].id2RL[path];
     }
 }

@@ -1,13 +1,16 @@
-package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
+package org.teacon.neb.network.aggressive.compress;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
-import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
+import net.minecraft.network.ConnectionProtocol;
+import org.teacon.neb.NotEnoughBandwidth;
+import org.teacon.neb.network.NetworkManager;
+import org.teacon.neb.network.aggressive.CompressedPacket;
+import org.teacon.neb.profiler.IProfiler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.VarInt;
@@ -50,6 +53,9 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
     @Override
     protected void encode(ChannelHandlerContext context, CompressedTransfer transfer, List<Object> out) {
         PacketEncoder<?> encoder = (PacketEncoder<?>) context.pipeline().get("encoder");
+        if (encoder.getProtocolInfo().id() != ConnectionProtocol.PLAY) {
+            throw new AssertionError("CompressEncoder should only be enabled in PLAY connection state.");
+        }
 
         Object2IntMap<ResourceLocation> sizes = SIZES.get();
         ByteBuf buf = context.alloc().directBuffer(), temp = context.alloc().directBuffer();
@@ -72,7 +78,7 @@ public final class CompressEncoder extends MessageToMessageEncoder<CompressEncod
 
         CompressContext.get().compress(buf, temp);
         if (buf.writerIndex() != 0) {
-            NotEnoughBandwidth.PROFILER.onTransmitPacket(sizes, buf.writerIndex(), temp.writerIndex());
+            IProfiler.PROFILER.onTransmitPacket(Object2IntMaps.unmodifiable(sizes), buf.writerIndex(), temp.writerIndex());
         }
         sizes.clear();
 

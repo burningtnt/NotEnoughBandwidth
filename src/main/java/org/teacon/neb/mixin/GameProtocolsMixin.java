@@ -1,7 +1,7 @@
-package cn.ussshenzhou.notenoughbandwidth.mixin;
+package org.teacon.neb.mixin;
 
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
-import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
+import org.teacon.neb.network.aggressive.CompressedPacket;
+import org.teacon.neb.network.indexed.IndexPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.ProtocolInfoBuilder;
 import net.minecraft.network.protocol.game.GameProtocols;

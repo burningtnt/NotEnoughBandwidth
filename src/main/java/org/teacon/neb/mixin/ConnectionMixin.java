@@ -1,12 +1,16 @@
-package cn.ussshenzhou.notenoughbandwidth.mixin;
+package org.teacon.neb.mixin;
 
-import cn.ussshenzhou.notenoughbandwidth.network.NetworkManager;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressDecoder;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import io.netty.channel.ChannelPipeline;
-import net.minecraft.network.*;
+import net.minecraft.network.BandwidthDebugMonitor;
+import net.minecraft.network.Connection;
+import net.minecraft.network.ConnectionProtocol;
+import net.minecraft.network.PacketDecoder;
+import net.minecraft.network.PacketEncoder;
+import net.minecraft.network.PacketSendListener;
+import net.minecraft.network.ProtocolInfo;
+import net.minecraft.network.UnconfiguredPipelineHandler;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +19,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.teacon.neb.network.NetworkManager;
+import org.teacon.neb.network.aggressive.compress.CompressDecoder;
+import org.teacon.neb.network.aggressive.compress.CompressEncoder;
 
 /**
  * @author USS_Shenzhou

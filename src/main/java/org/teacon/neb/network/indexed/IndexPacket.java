@@ -1,6 +1,6 @@
-package cn.ussshenzhou.notenoughbandwidth.network.indexed;
+package org.teacon.neb.network.indexed;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
+import org.teacon.neb.NotEnoughBandwidth;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,6 +18,7 @@ import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -89,6 +90,7 @@ public record IndexPacket(PacketType<IndexPacket> type,CustomPacketPayload paylo
                 if (codec != null) {
                     codec.encode(buf, packet.payload());
                 } else {
+                    // Should NOT be here: Packets with known index should be known by vanilla CustomPayloadPacket.
                     throw new AssertionError("ResourceLocation " + type + " is unknown.");
                 }
             }
@@ -109,7 +111,14 @@ public record IndexPacket(PacketType<IndexPacket> type,CustomPacketPayload paylo
 
                 StreamCodec<? super FriendlyByteBuf, CustomPacketPayload> codec = getCodec(type);
                 if (codec != null) {
-                    return new IndexPacket(packetType, codec.decode(buf));
+                    CustomPacketPayload payload;
+                    try {
+                        payload = codec.decode(buf);
+                    } catch (RuntimeException e) {
+                        throw new RuntimeException("Failed encoding custom payload: " + type, e);
+                    }
+
+                    return new IndexPacket(packetType, payload);
                 } else {
                     int i = buf.readableBytes();
                     if (i >= 0 && i <= 1048576) {

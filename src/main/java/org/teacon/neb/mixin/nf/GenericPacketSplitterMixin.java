@@ -1,8 +1,6 @@
-package cn.ussshenzhou.notenoughbandwidth.mixin.nf;
+package org.teacon.neb.mixin.nf;
 
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import org.teacon.neb.network.aggressive.CompressedPacket;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.protocol.Packet;
 import net.neoforged.neoforge.network.filters.GenericPacketSplitter;

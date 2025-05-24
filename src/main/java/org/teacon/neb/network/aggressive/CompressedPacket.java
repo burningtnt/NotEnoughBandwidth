@@ -1,8 +1,6 @@
-package cn.ussshenzhou.notenoughbandwidth.network.aggressive;
+package org.teacon.neb.network.aggressive;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
+import org.teacon.neb.NotEnoughBandwidth;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,6 +9,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.PacketType;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault

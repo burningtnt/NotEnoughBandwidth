@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.profiler;
+package org.teacon.neb.profiler;
 
 import com.mojang.logging.LogUtils;
 import io.prometheus.client.Counter;

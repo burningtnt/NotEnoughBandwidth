@@ -27,6 +27,8 @@ neoForge {
         minecraftVersion = project.parchment_minecraft_version
     }
 
+    interfaceInjectionData.from "interfaces.json"
+
     // This line is optional. Access Transformers are automatically detected
     // accessTransformers.add('src/main/resources/META-INF/accesstransformer.cfg')
 
@@ -43,14 +45,6 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        // This run config launches GameTestServer and runs all registered gametests, then exits.
-        // By default, the server will crash when no gametests are provided.
-        // The gametest system is also enabled by default for other run configs under the /test command.
-        gameTestServer {
-            type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -112,18 +106,11 @@ dependencies {
     // Example project dependency using a sister or child project:
     // implementation project(":myproject")
 
-    jarJar(implementation("io.prometheus:simpleclient:0.16.0"))
-    jarJar(implementation("io.prometheus:simpleclient_httpserver:0.16.0"))
-    jarJar(implementation("io.prometheus:simpleclient_common:0.16.0"))
-    additionalRuntimeClasspath "io.prometheus:simpleclient_httpserver:0.16.0"
+    additionalRuntimeClasspath(jarJar(implementation("io.prometheus:simpleclient:0.16.0")))
+    additionalRuntimeClasspath(jarJar(implementation("io.prometheus:simpleclient_httpserver:0.16.0")))
+    additionalRuntimeClasspath(jarJar(implementation("io.prometheus:simpleclient_common:0.16.0")))
 
-    jarJar(implementation("com.github.luben:zstd-jni")) {
-        version {
-            strictly '[1.5, 1.6)'
-            prefer '1.5.6-9'
-        }
-    }
-    additionalRuntimeClasspath 'com.github.luben:zstd-jni:1.5.6-9'
+    additionalRuntimeClasspath(jarJar(implementation("com.github.luben:zstd-jni:1.5.7-3")))
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
@@ -157,48 +144,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 sourceSets.main.resources.srcDir generateModMetadata
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
-
-// Example configuration to allow publishing using the maven-publish plugin
-publishing {
-    publications {
-        // Modified by TeaCon
-        register('release', MavenPublication) {
-            // noinspection GroovyAssignabilityCheck
-            from components.java
-            version = rootProject.version
-            groupId = "org.teacon"
-            artifactId = "$mod_github_repo-NeoForge-$rootProject.minecraft_version"
-            pom {
-                name = mod_github_repo
-                url = "https://github.com/$mod_github_owner/$mod_github_repo"
-                licenses {
-                    license {
-                        name = mod_license
-                        url = "https://github.com/$mod_github_owner/$mod_github_repo/blob/HEAD/LICENSE"
-                    }
-                }
-                organization {
-                    name = 'TeaConMC'
-                    url = 'https://github.com/teaconmc'
-                }
-                developers {
-                    for (mod_author in "$mod_authors".split(',')) {
-                        developer { id = mod_author.trim(); name = mod_author.trim() }
-                    }
-                }
-                issueManagement {
-                    system = 'GitHub Issues'
-                    url = "https://github.com/$mod_github_owner/$mod_github_repo/issues"
-                }
-                scm {
-                    url = "https://github.com/$mod_github_owner/$mod_github_repo"
-                    connection = "scm:git:git://github.com/$mod_github_owner/${mod_github_repo}.git"
-                    developerConnection = "scm:git:git@github.com:$mod_github_owner/${mod_github_repo}.git"
-                }
-            }
-        }
-    }
-}
 
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
 idea {

@@ -1,9 +1,11 @@
-package cn.ussshenzhou.notenoughbandwidth.profiler;
+package org.teacon.neb.profiler;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.resources.ResourceLocation;
 
 public interface IProfiler {
+    IProfiler PROFILER = getInstance();
+
     void onTransmitPacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressedSize);
 
     void onReceivePacket(Object2IntMap<ResourceLocation> originalSizes, double totalSize, double compressedSize);

@@ -1,4 +1,4 @@
-package cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress;
+package org.teacon.neb.network.aggressive.compress;
 
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
@@ -29,7 +29,8 @@ public final class CompressContext {
         this.compress = new ZstdCompressCtx()
                 .setLevel(Zstd.defaultCompressionLevel())
                 .setChecksum(false)
-                .setMagicless(true);
+                .setMagicless(true)
+                .setContentSize(false);
         this.decompress = new ZstdDecompressCtx()
                 .setMagicless(true);
 

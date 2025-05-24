@@ -1,7 +1,7 @@
-package cn.ussshenzhou.notenoughbandwidth.mixin;
+package org.teacon.neb.mixin;
 
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressDecoder;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.compress.CompressEncoder;
+import org.teacon.neb.network.aggressive.compress.CompressDecoder;
+import org.teacon.neb.network.aggressive.compress.CompressEncoder;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.ProtocolSwapHandler;
 import net.minecraft.network.protocol.Packet;

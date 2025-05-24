@@ -1,18 +1,22 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "cn.ussshenzhou.notenoughbandwidth.mixin",
+  "package": "org.teacon.neb.mixin",
   "compatibilityLevel": "JAVA_21",
   "refmap": "nebw.refmap.json",
   "mixins": [
     "ConnectionMixin",
     "CustomPayloadPacketMixin",
     "GameProtocolsMixin",
+    "PacketDecoderMixin",
     "ProtocolSwapHandlerMixin",
     "nf.GenericPacketSplitterMixin",
     "nf.NetworkRegistryMixin"
   ],
   "injectors": {
     "defaultRequire": 1
+  },
+  "mixinextras": {
+    "minVersion": "0.5.0-beta.1"
   }
 }

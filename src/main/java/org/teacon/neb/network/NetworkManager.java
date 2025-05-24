@@ -1,10 +1,10 @@
-package cn.ussshenzhou.notenoughbandwidth.network;
+package org.teacon.neb.network;
 
-import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidth;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.AggressiveBuffer;
-import cn.ussshenzhou.notenoughbandwidth.network.aggressive.CompressedPacket;
-import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexLookup;
-import cn.ussshenzhou.notenoughbandwidth.network.indexed.IndexPacket;
+import org.teacon.neb.NotEnoughBandwidth;
+import org.teacon.neb.network.aggressive.AggressiveBuffer;
+import org.teacon.neb.network.aggressive.CompressedPacket;
+import org.teacon.neb.network.indexed.IndexLookup;
+import org.teacon.neb.network.indexed.IndexPacket;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
